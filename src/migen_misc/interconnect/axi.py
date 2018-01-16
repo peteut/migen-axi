@@ -28,7 +28,7 @@ _layout = [
     ("aw", [
         ("id", "id_width", DIR_M_TO_S),  # write address ID
         ("addr", "addr_width", DIR_M_TO_S),  # write address
-        ("len", 8, DIR_M_TO_S),  # burst length
+        ("len", 4, DIR_M_TO_S),  # burst length
         ("size", 3, DIR_M_TO_S),  # burst size
         ("burst", 2, DIR_M_TO_S),  # burst type
         ("lock", 2, DIR_M_TO_S),  # lock type
@@ -58,7 +58,7 @@ _layout = [
     ("ar", [
         ("id", "id_width", DIR_M_TO_S),  # read address ID
         ("addr", "addr_width", DIR_M_TO_S),  # read address
-        ("len", 8, DIR_M_TO_S),  # burst length
+        ("len", 4, DIR_M_TO_S),  # burst length
         ("size", 3, DIR_M_TO_S),  # burst size
         ("burst", 2, DIR_M_TO_S),  # burst type
         ("lock", 2, DIR_M_TO_S),  # lock type
