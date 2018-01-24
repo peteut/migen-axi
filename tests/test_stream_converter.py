@@ -1,6 +1,6 @@
 from toolz.curried import *  # noqa
 from misoc.interconnect import stream
-from migen_misc.interconnect import *  # noqa
+from migen_misc.interconnect import axi, Reader
 from .common import write_ack, wait_stb, file_tmp_folder
 from migen.sim import run_simulation
 
@@ -106,7 +106,7 @@ def test_downscaler():
         vcd_name=file_tmp_folder("test_downscaler.vcd"))
 
 
-def test_reader_integration():
+def test_reader():
     i = axi.Interface()
     dw = i.data_width
     dut = Reader(i)
@@ -117,7 +117,7 @@ def test_reader_integration():
     request = partial(request_addr, sink)
     read = partial(read_data, source)
 
-    def tesetbench_reader_integration():
+    def testbench_reader():
 
         def push_addr():
             yield from request(0x11223344, eop=True)
@@ -142,5 +142,5 @@ def test_reader_integration():
         ]
 
     run_simulation(
-        dut, tesetbench_reader_integration(),
-        vcd_name=file_tmp_folder("test_reader_integration.vcd"))
+        dut, testbench_reader(),
+        vcd_name=file_tmp_folder("test_reader.vcd"))
