@@ -1,4 +1,4 @@
-### Migen Misc
+## Migen Misc
 
 [![Build Status](https://travis-ci.org/peteut/migen-misc.svg)](
 https://travis-ci.org/peteut/migen-misc)
@@ -7,11 +7,22 @@ https://coveralls.io/r/peteut/migen-misc)
 
 This repo contains some Migen modules.
 
-#### Interconnect
+### Cores
+
+- [x] wrapper for PS7
+- [ ] AXI interconnect
+
+### Interconnect
+
+- [x] AXI2CSR
+- [x] P2P interconnect
+- [ ] InterconnectShared
+- [ ] Crossbar
+- [ ] DMAC PRI support (misoc.interconnect.stream -> DMAC | PRI)
 
 WIP: AIX modules, aiming for ZYNQ SoC support.
 
-#### License
+### License
 
 Released under the MIT license, see LICENSE file for info.
 
