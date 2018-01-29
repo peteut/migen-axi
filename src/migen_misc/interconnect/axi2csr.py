@@ -2,119 +2,134 @@ from operator import attrgetter
 from toolz.curried import *  # noqa
 from migen import *  # noqa
 from . import axi
-from misoc.interconnect import csr_bus, stream
+from misoc.interconnect import csr_bus
 
 __all__ = ["AXI2CSR"]
 
 
-expand_strb = comp(Cat, map(flip(Replicate, 8)), concat)
-
-
 class AXI2CSR(Module):
-    def __init__(self, bus_axi=None, bus_csr=None, depth=4):
+    def __init__(self, bus_axi=None, bus_csr=None):
         self.bus = bus_axi or axi.Interface()
         self.csr = bus_csr or csr_bus.Interface()
 
-        need_wstrb = (len(self.csr.dat_r) // 8) > 1
-
         ###
 
+        if len(self.csr.dat_w) != 8:
+            raise NotImplementedError(
+                "AXI2CSR is currently only implemented for data_width = 8")
+
         ar, aw, w, r, b = attrgetter("ar", "aw", "w", "r", "b")(self.bus)
-        FIFO = partial(stream.SyncFIFO, depth=depth)
 
-        self.submodules.arfifo = FIFO(axi.rec_layout(ar, {"addr", "id"}))
-        self.comb += axi.connect_sink_hdshk(ar, self.arfifo.sink)
-        self.comb += [
-            self.arfifo.sink.addr.eq(ar.addr), self.arfifo.sink.id.eq(ar.id),
-        ]
-        self.submodules.awfifo = FIFO(axi.rec_layout(aw, {"addr", "id"}))
-        self.comb += axi.connect_sink_hdshk(aw, self.awfifo.sink)
-        self.comb += [
-            self.awfifo.sink.addr.eq(aw.addr), self.awfifo.sink.id.eq(aw.id),
-        ]
-        self.submodules.wfifo = FIFO(axi.rec_layout(w, {"data", "strb"}))
-        self.comb += axi.connect_sink_hdshk(w, self.wfifo.sink)
-        self.comb += [
-            # mask strobe
-            self.wfifo.sink.data.eq(w.data & expand_strb(w.strb)),
-            self.wfifo.sink.strb.eq(w.strb),
-        ]
-        self.submodules.rfifo = FIFO(axi.rec_layout(r, {"data", "id"}))
-        self.comb += axi.connect_source_hdshk(r, self.rfifo.source)
-        self.comb += [
-            self.rfifo.sink.id.eq(self.arfifo.source.id),
-            self.rfifo.sink.data.eq(self.csr.dat_r),
-            r.id.eq(self.rfifo.source.id),
-            r.data.eq(self.rfifo.source.data),
-        ]
-        self.submodules.bfifo = FIFO(axi.rec_layout(b, {"id"}))
-        self.comb += axi.connect_source_hdshk(b, self.bfifo.source)
-        self.comb += [
-            self.bfifo.sink.id.eq(self.awfifo.source.id),
-            b.id.eq(self.bfifo.source.id),
-        ]
-        self.sync += [
-            self.csr.we.eq(0),
-            self.rfifo.sink.stb.eq(0),
-            If(
-                self.arfifo.source.stb,
-                self.csr.adr.eq(self.arfifo.source.addr),
-            ).Elif(
-                self.awfifo.source.stb,
-                self.csr.adr.eq(self.awfifo.source.addr),
-            ),
-        ]
-        if need_wstrb:
-            self.sync += self.csr.dat_w.eq(
-                self.wfifo.source.data |
-                (expand_strb(~ self.wfifo.source.strb) & self.csr.dat_r))
-        else:
-            self.sync += self.csr.dat_w.eq(self.wfifo.source.data)
+        id_ = Signal(len(ar.id), reset_less=True)
 
+        # control
+        adr_next = Signal(2, reset_less=True)
+        adr_incr = Signal(2, reset_less=True)
+        pending = Signal(reset_less=True)
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
         fsm.act(
             "IDLE",
+            aw.ready.eq(1),
+            ar.ready.eq(1),
             If(
-                self.arfifo.source.stb & self.rfifo.sink.ack,
-                NextState("READ")
+                aw.valid,
+                ar.ready.eq(0),
+                NextValue(self.csr.adr, aw.addr),
+                NextValue(id_, aw.id),
+                NextValue(pending, 1),
+                NextState("WRITE"),
             ).Elif(
-                self.awfifo.source.stb & self.bfifo.sink.ack &
-                self.bfifo.sink.ack,
-                [NextValue(self.csr.we, 1), NextState("WRITE")]
-                if not need_wstrb else
-                [NextState("READ_MODIFY_WRITE")]
+                ar.valid,
+                NextValue(self.csr.adr, ar.addr),
+                NextValue(id_, ar.id),
+                NextValue(pending, 1),
+                NextState("READ"),
+            ),
+        )
+        fsm.act(
+            "WRITE",
+            If(
+                w.valid,
+                If(
+                    ~pending,
+                    adr_next.eq(adr_incr),
+                ),
+                If(
+                    adr_next == 3,
+                    w.ready.eq(1),
+                    NextState("WRITE_DONE"),
+                ),
+            )
+            .Else(
+                NextValue(pending, 1),
+            )
+        )
+        fsm.act(
+            "WRITE_DONE",
+            b.valid.eq(1),
+            If(
+                b.ready,
+                NextState("IDLE")
             )
         )
         fsm.act(
             "READ",
             If(
-                self.rfifo.sink.stb,
-                NextState("IDLE")
-            )
-            .Else(
-                NextValue(self.rfifo.sink.stb, 1)
+                ~pending,
+                If(
+                    self.csr.adr[:2] == 3,
+                    NextState("READ_DONE"),
+                )
+                .Else(
+                    NextValue(pending, 1),
+                    adr_next.eq(adr_incr),
+                )
             )
         )
-        if need_wstrb:
-            fsm.act(
-                "READ_MODIFY_WRITE",
-                NextState("WRITE"),
-                NextValue(self.csr.we, 1)
-            )
         fsm.act(
-            "WRITE",
+            "READ_DONE",
+            r.valid.eq(1),
             If(
-                self.wfifo.source.stb,
+                r.ready,
                 NextState("IDLE"),
-            ),
-            self.awfifo.source.ack.eq(1),
-            self.wfifo.source.ack.eq(1),
-            self.bfifo.sink.stb.eq(1)
+            )
         )
+
+        # dataflow
+        write_state = fsm.ongoing("WRITE")
+        read_state = fsm.ongoing("READ")
+
         self.comb += [
-            r.last.eq(1), w.last.eq(1),
+            adr_incr.eq(self.csr.adr[:2] + 1),
+            adr_next.eq(self.csr.adr[:2]),
+            r.id.eq(id_),
+            b.id.eq(id_),
             r.resp.eq(axi.Response.okay.value),
             b.resp.eq(axi.Response.okay.value),
-
-            self.arfifo.source.ack.eq(self.rfifo.sink.stb),
+            r.last.eq(1),
+        ]
+        self.sync += [
+            pending.eq(0),
+            self.csr.we.eq(0),
+            self.csr.adr[:2].eq(adr_next),
+            If(
+                write_state,
+                Case(
+                    adr_next,
+                    dict([(i, self.csr.dat_w.eq(
+                        w.data[i * 8: i * 8 + 8])) for i in range(4)])
+                ),
+                Case(
+                    adr_next,
+                    dict([(i, self.csr.we.eq(w.strb[i])) for i in range(4)])
+                ),
+            ),
+            If(
+                read_state,
+                Case(
+                    self.csr.adr[:2],
+                    dict([(i, r.data[i * 8: i * 8 + 8].eq(
+                        self.csr.dat_r)) for i in range(4)])
+                )
+            ),
         ]

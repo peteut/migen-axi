@@ -69,7 +69,7 @@ def test_layout_rename_item(layout, current_name, new_name, new_layout):
 
 
 def test_axi2csr():
-    dut = AXI2CSR(depth=4)
+    dut = AXI2CSR()
     dut.submodules.sram = csr_bus.SRAM(0x100, 0)
     dut.submodules += csr_bus.Interconnect(dut.csr, [dut.sram.bus])
 
@@ -90,20 +90,17 @@ def test_axi2csr():
         i = dut.bus
 
         def aw_channel():
-            # fill aw FIFO
             assert (yield i.aw.ready) == 1
             yield from write_aw(0x01, 0x00)
             yield from write_aw(0x02, 0x04)
             yield from write_aw(0x03, 0x08)
             yield from write_aw(0x04, 0x0c)
-            # yield from ar_channel()
 
         def w_channel():
-            # fill w FIFO
-            yield from write_w(0, 0x11)
-            yield from write_w(0, 0x22)
-            yield from write_w(0, 0x33)
-            yield from write_w(0, 0x44)
+            yield from write_w(0, 0x11, strb=1)
+            yield from write_w(0, 0x22, strb=1)
+            yield from write_w(0, 0x33, strb=1)
+            yield from write_w(0, 0x44, strb=1)
 
         def b_channel():
             assert attrgetter_b((yield from read_b())) == (0x01, okay)
@@ -124,6 +121,7 @@ def test_axi2csr():
             yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x0c, 0x44)
             # ok, read it now
+            yield
             yield from write_ar(0x11, 0x00)
             yield
             yield from write_ar(0x22, 0x04)
@@ -150,7 +148,7 @@ def test_axi2csr():
 
 
 def test_axi2csr_wstrb():
-    dut = AXI2CSR(depth=4, bus_csr=csr_bus.Interface(32))
+    dut = AXI2CSR()
     dut.submodules.sram = csr_bus.SRAM(
         0x100, 0, bus=csr_bus.Interface.like(dut.csr))
     dut.submodules += csr_bus.Interconnect(dut.csr, [dut.sram.bus])
@@ -172,13 +170,11 @@ def test_axi2csr_wstrb():
         i = dut.bus
 
         def aw_channel():
-            # fill aw FIFO
             assert (yield i.aw.ready) == 1
             yield from write_aw(0x01, 0x00)
             yield from write_aw(0x02, 0x00)
 
         def w_channel():
-            # fill w FIFO
             yield from write_w(0, 0x11223344)
             yield from write_w(0, 0x11, strb=1)
 
@@ -189,11 +185,13 @@ def test_axi2csr_wstrb():
 
         def ar_channel():
             # ensure data was actually written
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (
-                0x00, 0x11223344)
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (
-                0x00, 0x11223344)
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x00, 0x44)
             yield
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x01, 0x33)
+            yield
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x02, 0x22)
+            yield
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x03, 0x11)
             # ok, read it now
             yield from write_ar(0x11, 0x00)
 
