@@ -144,6 +144,7 @@ def read_attrs(ch):
     for name, *_ in ch.layout:
         setattr(ns, name, (yield getattr(ch, name)))
     yield from read_ack(ch)
+    yield
     return ns
 
 

@@ -104,21 +104,15 @@ def test_axi2csr():
 
         def b_channel():
             assert attrgetter_b((yield from read_b())) == (0x01, okay)
-            yield
             assert attrgetter_b((yield from read_b())) == (0x02, okay)
-            yield
             assert attrgetter_b((yield from read_b())) == (0x03, okay)
-            yield
             assert attrgetter_b((yield from read_b())) == (0x04, okay)
 
         def ar_channel():
             # ensure data was actually written
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x00, 0x11)
-            yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x04, 0x22)
-            yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x08, 0x33)
-            yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x0c, 0x44)
             # ok, read it now
             yield from write_ar(0x11, 0x00)
@@ -128,11 +122,8 @@ def test_axi2csr():
 
         def r_channel():
             assert attrgetter_r((yield from read_r())) == (0x11, 0x11, okay, 1)
-            yield
             assert attrgetter_r((yield from read_r())) == (0x22, 0x22, okay, 1)
-            yield
             assert attrgetter_r((yield from read_r())) == (0x33, 0x33, okay, 1)
-            yield
             assert attrgetter_r((yield from read_r())) == (0x44, 0x44, okay, 1)
 
         return [
@@ -176,17 +167,13 @@ def test_axi2csr_wstrb():
 
         def b_channel():
             assert attrgetter_b((yield from read_b())) == (0x01, okay)
-            yield
             assert attrgetter_b((yield from read_b())) == (0x02, okay)
 
         def ar_channel():
             # ensure data was actually written
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x00, 0x44)
-            yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x01, 0x33)
-            yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x02, 0x22)
-            yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x03, 0x11)
             # ok, read it now
             yield from write_ar(0x11, 0x00)
@@ -370,11 +357,9 @@ def test_writer():
         def aw_channel():
             assert attrgetter_aw((yield from i.read_aw())) == (
                 0x11223344, 3, Burst.incr.value)
-            yield
             # 2nd burst
             assert attrgetter_aw((yield from i.read_aw())) == (
                 0x11223354, 3, Burst.incr.value)
-            yield
             # 3rd burst
             assert attrgetter_aw((yield from i.read_aw())) == (
                 0x11223344, 3, Burst.incr.value)
@@ -383,39 +368,28 @@ def test_writer():
             yield i.w.ready.eq(1)
             assert attrgetter_w((yield from i.read_w())) == (
                 0x11111111, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x22222222, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x33333333, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x44444444, 0xf, 1)
-            yield
             # 2nd burst
             assert attrgetter_w((yield from i.read_w())) == (
                 0x11111111, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x22222222, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x33333333, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x44444444, 0xf, 1)
-            yield
             # 3rd burst
             assert attrgetter_w((yield from i.read_w())) == (
                 0x11111100, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x22222200, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x22222200, 0xf, 0)
-            yield
             assert attrgetter_w((yield from i.read_w())) == (
                 0x22222200, 0xf, 1)
             yield i.w.ready.eq(0)

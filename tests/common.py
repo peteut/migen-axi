@@ -33,6 +33,7 @@ def csr_w_mon(csr_bus):
     ns = SimpleNamespace()
     ns.adr = (yield csr_bus.adr)
     ns.dat_w = (yield csr_bus.dat_w)
+    yield
     return ns
 
 
