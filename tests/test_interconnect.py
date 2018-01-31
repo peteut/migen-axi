@@ -121,13 +121,9 @@ def test_axi2csr():
             yield
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x0c, 0x44)
             # ok, read it now
-            yield
             yield from write_ar(0x11, 0x00)
-            yield
             yield from write_ar(0x22, 0x04)
-            yield
             yield from write_ar(0x33, 0x08)
-            yield
             yield from write_ar(0x44, 0x0c)
 
         def r_channel():

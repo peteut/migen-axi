@@ -95,10 +95,9 @@ class AXI2CSR(Module):
             )
         )
 
-        # dataflow
+        # data path
         write_state = fsm.ongoing("WRITE")
         read_state = fsm.ongoing("READ")
-
         self.comb += [
             adr_incr.eq(self.csr.adr[:2] + 1),
             adr_next.eq(self.csr.adr[:2]),
