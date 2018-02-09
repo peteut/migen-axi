@@ -294,7 +294,7 @@ irq_rec = partial(Record, [
 ])
 
 bibuf = comp(
-    apply_map(partial(Instance, "BIBUF",)),
+    apply_map(partial(Instance, "BIBUF")),
     dict, partial(zip, ["io_PAD", "io_IO"]))
 
 bufg = comp(
