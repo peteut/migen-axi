@@ -24,7 +24,7 @@ class SoCCore(Module):
                  csr_data_width=8,
                  csr_address_width=14,
                  max_addr=0xc0000000,
-                 ident=""):
+                 ident="SoCCore"):
         self.platform = platform
         # self.clk_freq = clk_freq
 
@@ -54,8 +54,7 @@ class SoCCore(Module):
         self.register_mem("csr", self.mem_map["csr"], 2**csr_address_width,
                           self.axi2csr.bus)
 
-        if ident:
-            self.submodules.identifier = identifier.Identifier(ident)
+        self.submodules.identifier = identifier.Identifier(ident)
 
     def add_axi_slave(self, origin, length, interface):
         if self.finalized:
@@ -96,9 +95,8 @@ class SoCCore(Module):
             data_width=self.csr_data_width,
             address_width=self.csr_address_width)
 
-        if len(self.csrbankarray.get_buses()) > 0:
-            self.submodules.csrcon = csr_bus.Interconnect(
-                self.axi2csr.csr, self.csrbankarray.get_buses())
+        self.submodules.csrcon = csr_bus.Interconnect(
+            self.axi2csr.csr, self.csrbankarray.get_buses())
 
         for name, csrs, mapaddr, rmap in self.csrbankarray.banks:
             self.add_csr_region(
