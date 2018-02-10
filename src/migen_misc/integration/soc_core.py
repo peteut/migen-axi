@@ -114,6 +114,11 @@ class SoCCore(Module):
             self.add_csr_region(
                 name, (self.mem_map["csr"] + 0x800 * mapaddr),
                 self.csr_data_width, csrs)
+        for name, memory, mapaddr, mmap in self.csrbankarray.srams:
+            self.add_csr_region(
+                "{}_{}".format(name, memory.name_override),
+                (self.mem_map["csr"] + 0x800 * mapaddr),
+                self.csr_data_width, memory)
         for name, constant in self.csrbankarray.constants:
             self._constants.append(
                 (("_".join([name, constant.name]).uppper(),
