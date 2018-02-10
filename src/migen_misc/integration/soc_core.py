@@ -80,6 +80,18 @@ class SoCCore(Module):
         self.add_axi_slave(origin, length, interface)
         self.add_memory_region(name, origin, length)
 
+    @property
+    def memory_regions(self):
+        return self._memory_regions
+
+    @property
+    def csr_regions(self):
+        return self._csr_regions
+
+    @property
+    def constants(self):
+        return self._constants
+
     def get_csr_dev_address(self, name, memory):
         if memory is not None:
             name = "_".join([name, memory.name_override])
