@@ -124,7 +124,7 @@ class AXI2CSR(Module):
                 ),
             ),
             If(
-                read_state,
+                ~pending & read_state,
                 Case(
                     self.csr.adr[:2],
                     dict([(i, r.data[i * 8: i * 8 + 8].eq(
