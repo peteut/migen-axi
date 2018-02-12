@@ -1,0 +1,9 @@
+[run]
+branch = True
+source =
+    migen_misc
+
+[paths]
+source =
+    src/migen_misc
+    .tox/*/lib/python*/site-packages/migen_misc
