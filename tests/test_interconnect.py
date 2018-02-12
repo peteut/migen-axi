@@ -68,9 +68,15 @@ def test_layout_rename_item(layout, current_name, new_name, new_layout):
     assert layout_rename_item(layout, current_name, new_name) == new_layout
 
 
-def test_axi2csr():
-    dut = AXI2CSR()
-    dut.submodules.sram = csr_bus.SRAM(0x100, 0)
+@pytest.mark.parametrize(
+    "data_width", [
+        8,
+        16,
+    ])
+def test_axi2csr(data_width):
+    dut = AXI2CSR(bus_csr=csr_bus.Interface(data_width=data_width))
+    dut.submodules.sram = csr_bus.SRAM(
+        0x100, 0, bus=csr_bus.Interface(data_width=data_width))
     dut.submodules += csr_bus.Interconnect(dut.csr, [dut.sram.bus])
 
     write_aw = partial(
@@ -118,10 +124,20 @@ def test_axi2csr():
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x08, 0x33)
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x0c, 0x44)
 
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x40, 0x44)
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x41, 0x33)
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x42, 0x22)
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x43, 0x11)
+            if data_width == 8:
+                assert attrgetter_csr_w_mon(
+                    (yield from w_mon())) == (0x40, 0x44)
+                assert attrgetter_csr_w_mon(
+                    (yield from w_mon())) == (0x41, 0x33)
+                assert attrgetter_csr_w_mon(
+                    (yield from w_mon())) == (0x42, 0x22)
+                assert attrgetter_csr_w_mon(
+                    (yield from w_mon())) == (0x43, 0x11)
+            elif data_width == 16:
+                assert attrgetter_csr_w_mon(
+                    (yield from w_mon())) == (0x40, 0x3344)
+                assert attrgetter_csr_w_mon(
+                    (yield from w_mon())) == (0x42, 0x1122)
 
             # ok, read it now
             yield from write_ar(0x11, 0x00)
