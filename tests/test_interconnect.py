@@ -95,18 +95,21 @@ def test_axi2csr():
             yield from write_aw(0x02, 0x04)
             yield from write_aw(0x03, 0x08)
             yield from write_aw(0x04, 0x0c)
+            yield from write_aw(0x05, 0x40)
 
         def w_channel():
             yield from write_w(0, 0x11, strb=1)
             yield from write_w(0, 0x22, strb=1)
             yield from write_w(0, 0x33, strb=1)
             yield from write_w(0, 0x44, strb=1)
+            yield from write_w(0, 0x11223344)
 
         def b_channel():
             assert attrgetter_b((yield from read_b())) == (0x01, okay)
             assert attrgetter_b((yield from read_b())) == (0x02, okay)
             assert attrgetter_b((yield from read_b())) == (0x03, okay)
             assert attrgetter_b((yield from read_b())) == (0x04, okay)
+            assert attrgetter_b((yield from read_b())) == (0x05, okay)
 
         def ar_channel():
             # ensure data was actually written
@@ -114,17 +117,26 @@ def test_axi2csr():
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x04, 0x22)
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x08, 0x33)
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x0c, 0x44)
+
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x40, 0x44)
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x41, 0x33)
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x42, 0x22)
+            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x43, 0x11)
+
             # ok, read it now
             yield from write_ar(0x11, 0x00)
             yield from write_ar(0x22, 0x04)
             yield from write_ar(0x33, 0x08)
             yield from write_ar(0x44, 0x0c)
+            yield from write_ar(0x55, 0x40)
 
         def r_channel():
             assert attrgetter_r((yield from read_r())) == (0x11, 0x11, okay, 1)
             assert attrgetter_r((yield from read_r())) == (0x22, 0x22, okay, 1)
             assert attrgetter_r((yield from read_r())) == (0x33, 0x33, okay, 1)
             assert attrgetter_r((yield from read_r())) == (0x44, 0x44, okay, 1)
+            assert attrgetter_r((yield from read_r())) == (
+                0x55, 0x11223344, okay, 1)
 
         return [
             aw_channel(), w_channel(), b_channel(), r_channel(), ar_channel(),
