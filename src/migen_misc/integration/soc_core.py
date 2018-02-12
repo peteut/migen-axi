@@ -51,7 +51,7 @@ class SoCCore(Module):
             bus_csr=csr_bus.Interface(csr_data_width, csr_address_width),
             bus_axi=axi.Interface.like(self.ps7.m_axi_gp1))
 
-        self.register_mem("csr", self.mem_map["csr"], 2**csr_address_width,
+        self.register_mem("csr", self.mem_map["csr"], 4 * 2**csr_address_width,
                           self.axi2csr.bus)
 
         self.submodules.identifier = identifier.Identifier(ident)
