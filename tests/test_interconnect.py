@@ -123,22 +123,12 @@ def test_axi2csr(data_width):
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x04, 0x22)
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x08, 0x33)
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x0c, 0x44)
-
             if data_width == 8:
                 assert attrgetter_csr_w_mon(
                     (yield from w_mon())) == (0x40, 0x44)
-                assert attrgetter_csr_w_mon(
-                    (yield from w_mon())) == (0x41, 0x33)
-                assert attrgetter_csr_w_mon(
-                    (yield from w_mon())) == (0x42, 0x22)
-                assert attrgetter_csr_w_mon(
-                    (yield from w_mon())) == (0x43, 0x11)
             elif data_width == 16:
                 assert attrgetter_csr_w_mon(
                     (yield from w_mon())) == (0x40, 0x3344)
-                assert attrgetter_csr_w_mon(
-                    (yield from w_mon())) == (0x42, 0x1122)
-
             # ok, read it now
             yield from write_ar(0x11, 0x00)
             yield from write_ar(0x22, 0x04)
@@ -151,8 +141,12 @@ def test_axi2csr(data_width):
             assert attrgetter_r((yield from read_r())) == (0x22, 0x22, okay, 1)
             assert attrgetter_r((yield from read_r())) == (0x33, 0x33, okay, 1)
             assert attrgetter_r((yield from read_r())) == (0x44, 0x44, okay, 1)
-            assert attrgetter_r((yield from read_r())) == (
-                0x55, 0x11223344, okay, 1)
+            if data_width == 8:
+                assert attrgetter_r((yield from read_r())) == (
+                    0x55, 0x44, okay, 1)
+            elif data_width == 16:
+                assert attrgetter_r((yield from read_r())) == (
+                    0x55, 0x3344, okay, 1)
 
         return [
             aw_channel(), w_channel(), b_channel(), r_channel(), ar_channel(),
@@ -160,62 +154,6 @@ def test_axi2csr(data_width):
 
     run_simulation(dut, testbench_axi2csr(),
                    vcd_name=file_tmp_folder("test_axi2csr.vcd"))
-
-
-def test_axi2csr_wstrb():
-    dut = AXI2CSR()
-    dut.submodules.sram = csr_bus.SRAM(
-        0x100, 0, bus=csr_bus.Interface.like(dut.csr))
-    dut.submodules += csr_bus.Interconnect(dut.csr, [dut.sram.bus])
-
-    write_aw = partial(
-        dut.bus.write_aw,
-        size=burst_size(dut.bus.data_width // 8),
-        len_=1, burst=Burst.fixed.value)
-    write_w = dut.bus.write_w
-    read_b = dut.bus.read_b
-    write_ar = partial(
-        dut.bus.write_ar,
-        size=burst_size(dut.bus.data_width // 8),
-        len_=1, burst=Burst.fixed.value)
-    read_r = dut.bus.read_r
-    w_mon = partial(csr_w_mon, dut.csr)
-
-    def testbench_axi2csr():
-        i = dut.bus
-
-        def aw_channel():
-            assert (yield i.aw.ready) == 1
-            yield from write_aw(0x01, 0x00)
-            yield from write_aw(0x02, 0x00)
-
-        def w_channel():
-            yield from write_w(0, 0x11223344)
-            yield from write_w(0, 0x11, strb=1)
-
-        def b_channel():
-            assert attrgetter_b((yield from read_b())) == (0x01, okay)
-            assert attrgetter_b((yield from read_b())) == (0x02, okay)
-
-        def ar_channel():
-            # ensure data was actually written
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x00, 0x44)
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x01, 0x33)
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x02, 0x22)
-            assert attrgetter_csr_w_mon((yield from w_mon())) == (0x03, 0x11)
-            # ok, read it now
-            yield from write_ar(0x11, 0x00)
-
-        def r_channel():
-            assert attrgetter_r((yield from read_r())) == (
-                0x11, 0x11223311, okay, 1)
-
-        return [
-            aw_channel(), w_channel(), b_channel(), r_channel(), ar_channel(),
-        ]
-
-    run_simulation(dut, testbench_axi2csr(),
-                   vcd_name=file_tmp_folder("test_axi2csr_wstrb.vcd"))
 
 
 def test_countdown():

@@ -1,4 +1,4 @@
-from operator import attrgetter, and_
+from operator import attrgetter
 from toolz.curried import *  # noqa
 from migen import *  # noqa
 from . import axi
@@ -16,20 +16,16 @@ class AXI2CSR(Module):
 
         dw = len(self.csr.dat_w)
 
-        if dw not in (8, 16):
+        if dw not in (8, 16, 32):
             raise NotImplementedError(
-                "AXI2CSR is currently only implemented for dw of 8 or 16")
+                "AXI2CSR data_width shall be in (8, 16, 32)")
 
         ar, aw, w, r, b = attrgetter("ar", "aw", "w", "r", "b")(self.bus)
 
         id_ = Signal(len(ar.id), reset_less=True)
 
         # control
-        adr_next = Signal(2, reset_less=True)
-        adr_incr = Signal(2, reset_less=True)
         pending = Signal(reset_less=True)
-        pending_next = Signal()
-        self.comb += pending_next.eq(0)
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
         fsm.act(
             "IDLE",
@@ -40,13 +36,13 @@ class AXI2CSR(Module):
                 ar.ready.eq(0),
                 NextValue(self.csr.adr, aw.addr),
                 NextValue(id_, aw.id),
-                pending_next.eq(1),
+                NextValue(pending, 1),
                 NextState("WRITE"),
             ).Elif(
                 ar.valid,
                 NextValue(self.csr.adr, ar.addr),
                 NextValue(id_, ar.id),
-                pending_next.eq(1),
+                NextValue(pending, 1),
                 NextState("READ"),
             ),
         )
@@ -54,19 +50,10 @@ class AXI2CSR(Module):
             "WRITE",
             If(
                 w.valid,
-                If(
-                    ~pending,
-                    adr_next.eq(adr_incr),
-                ),
-                If(
-                    reduce(and_, adr_next[dw // 8 - 1:]),
-                    w.ready.eq(1),
-                    NextState("WRITE_DONE"),
-                ),
-            )
-            .Else(
-                pending_next.eq(1),
-            )
+                w.ready.eq(1),
+                NextValue(self.csr.we, 1),
+                NextState("WRITE_DONE"),
+            ),
         )
         fsm.act(
             "WRITE_DONE",
@@ -80,14 +67,7 @@ class AXI2CSR(Module):
             "READ",
             If(
                 ~pending,
-                If(
-                    reduce(and_, self.csr.adr[dw // 8 - 1:2]),
-                    NextState("READ_DONE"),
-                )
-                .Else(
-                    pending_next.eq(1),
-                    adr_next.eq(adr_incr),
-                )
+                NextState("READ_DONE"),
             )
         )
         fsm.act(
@@ -100,12 +80,7 @@ class AXI2CSR(Module):
         )
 
         # data path
-        write_state = fsm.ongoing("WRITE")
-        read_state = fsm.ongoing("READ")
         self.comb += [
-            adr_incr.eq(
-                (self.csr.adr[dw // 8 - 1:2] + 1) << (dw // 8 - 1)),
-            adr_next.eq(self.csr.adr[:2]),
             r.id.eq(id_),
             b.id.eq(id_),
             r.resp.eq(axi.Response.okay.value),
@@ -113,29 +88,8 @@ class AXI2CSR(Module):
             r.last.eq(1),
         ]
         self.sync += [
-            pending.eq(pending_next),
+            pending.eq(0),
+            r.data.eq(self.csr.dat_r),
             self.csr.we.eq(0),
-            self.csr.adr[:2].eq(adr_next),
-            If(
-                write_state,
-                Case(
-                    adr_next[dw // 8 - 1:],
-                    dict([(i, self.csr.dat_w.eq(
-                        w.data[i * dw:i * dw + dw]))
-                        for i in range(32 // dw)])
-                ),
-                Case(
-                    adr_next[dw // 8 - 1:],
-                    dict([(i, self.csr.we.eq(w.strb[i]))
-                          for i in range(32 // dw)])
-                ),
-            ),
-            If(
-                ~pending & read_state,
-                Case(
-                    self.csr.adr[dw // 8 - 1:2],
-                    dict([(i, r.data[i * dw:i * dw + dw].eq(
-                        self.csr.dat_r)) for i in range(32 // dw)])
-                )
-            ),
+            self.csr.dat_w.eq(w.data),
         ]
