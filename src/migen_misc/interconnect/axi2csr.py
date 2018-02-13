@@ -14,17 +14,17 @@ class AXI2CSR(Module):
 
         ###
 
-        if len(self.csr.dat_w) != 8:
+        dw = len(self.csr.dat_w)
+
+        if dw not in (8, 16, 32):
             raise NotImplementedError(
-                "AXI2CSR is currently only implemented for data_width = 8")
+                "AXI2CSR data_width shall be in (8, 16, 32)")
 
         ar, aw, w, r, b = attrgetter("ar", "aw", "w", "r", "b")(self.bus)
 
         id_ = Signal(len(ar.id), reset_less=True)
 
         # control
-        adr_next = Signal(2, reset_less=True)
-        adr_incr = Signal(2, reset_less=True)
         pending = Signal(reset_less=True)
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
         fsm.act(
@@ -34,13 +34,12 @@ class AXI2CSR(Module):
             If(
                 aw.valid,
                 ar.ready.eq(0),
-                NextValue(self.csr.adr, aw.addr),
+                NextValue(self.csr.adr, aw.addr[2:]),
                 NextValue(id_, aw.id),
-                NextValue(pending, 1),
                 NextState("WRITE"),
             ).Elif(
                 ar.valid,
-                NextValue(self.csr.adr, ar.addr),
+                NextValue(self.csr.adr, ar.addr[2:]),
                 NextValue(id_, ar.id),
                 NextValue(pending, 1),
                 NextState("READ"),
@@ -50,19 +49,10 @@ class AXI2CSR(Module):
             "WRITE",
             If(
                 w.valid,
-                If(
-                    ~pending,
-                    adr_next.eq(adr_incr),
-                ),
-                If(
-                    adr_next == 3,
-                    w.ready.eq(1),
-                    NextState("WRITE_DONE"),
-                ),
-            )
-            .Else(
-                NextValue(pending, 1),
-            )
+                w.ready.eq(1),
+                NextValue(self.csr.we, 1),
+                NextState("WRITE_DONE"),
+            ),
         )
         fsm.act(
             "WRITE_DONE",
@@ -76,14 +66,7 @@ class AXI2CSR(Module):
             "READ",
             If(
                 ~pending,
-                If(
-                    self.csr.adr[:2] == 3,
-                    NextState("READ_DONE"),
-                )
-                .Else(
-                    NextValue(pending, 1),
-                    adr_next.eq(adr_incr),
-                )
+                NextState("READ_DONE"),
             )
         )
         fsm.act(
@@ -96,11 +79,7 @@ class AXI2CSR(Module):
         )
 
         # data path
-        write_state = fsm.ongoing("WRITE")
-        read_state = fsm.ongoing("READ")
         self.comb += [
-            adr_incr.eq(self.csr.adr[:2] + 1),
-            adr_next.eq(self.csr.adr[:2]),
             r.id.eq(id_),
             b.id.eq(id_),
             r.resp.eq(axi.Response.okay.value),
@@ -109,26 +88,7 @@ class AXI2CSR(Module):
         ]
         self.sync += [
             pending.eq(0),
+            r.data.eq(self.csr.dat_r),
             self.csr.we.eq(0),
-            self.csr.adr[:2].eq(adr_next),
-            If(
-                write_state,
-                Case(
-                    adr_next,
-                    dict([(i, self.csr.dat_w.eq(
-                        w.data[i * 8: i * 8 + 8])) for i in range(4)])
-                ),
-                Case(
-                    adr_next,
-                    dict([(i, self.csr.we.eq(w.strb[i])) for i in range(4)])
-                ),
-            ),
-            If(
-                ~pending & read_state,
-                Case(
-                    self.csr.adr[:2],
-                    dict([(i, r.data[i * 8: i * 8 + 8].eq(
-                        self.csr.dat_r)) for i in range(4)])
-                )
-            ),
+            self.csr.dat_w.eq(w.data),
         ]
