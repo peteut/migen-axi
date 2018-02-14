@@ -609,7 +609,6 @@ class PS7(Module):
             keymap(str_replace("EMIOSPI1MTN", "EMIOSPI1MOTN")),
             keymap(str_replace("EVENTO", "EVENTEVENTO")),
             keymap(str_replace("EVENTI", "EVENTEVENTI")),
-            do(comp(print, "connected {} sigs".format, len)),
         )
         self.specials += Instance("PS7", **ps7_attrs)
 
