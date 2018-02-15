@@ -129,9 +129,14 @@ class SoCCore(Module):
             self.comb += self.ps7.interrupt[n].eq(getattr(self, name).ev.irq)
 
         # AXI: FIXME: add InterconnectShared support
+        slaves = self._axi_slaves.get_interconnect_slaves()
+        if len(slaves) > 2:
+            raise NotImplementedError("only P2P is supported")
         self.submodules += axi.InterconnectPointToPoint(
-            self.ps7.m_axi_gp1,
-            self._axi_slaves.get_interconnect_slaves()[0][1])
+            self.ps7.m_axi_gp1, slaves[0][1])
+        if len(slaves) == 2:
+            self.submodules += axi.InterconnectPointToPoint(
+                self.ps7.m_axi_gp0, slaves[1][1])
 
     def build(self, *args, **kwargs):
         self.platform.build(self, *args, **kwargs)
