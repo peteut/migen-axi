@@ -81,13 +81,13 @@ def test_axi2csr(data_width):
 
     write_aw = partial(
         dut.bus.write_aw,
-        size=burst_size(dut.bus.data_width // 8), len_=1,
+        size=burst_size(dut.bus.data_width // 8), len_=0,
         burst=Burst.fixed.value)
     write_w = dut.bus.write_w
     read_b = dut.bus.read_b
     write_ar = partial(
         dut.bus.write_ar,
-        size=burst_size(dut.bus.data_width // 8), len_=1,
+        size=burst_size(dut.bus.data_width // 8), len_=0,
         burst=Burst.fixed.value)
     read_r = dut.bus.read_r
     w_mon = partial(csr_w_mon, dut.csr)
