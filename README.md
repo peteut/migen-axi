@@ -28,6 +28,7 @@ custom AXI3 slave and *M_AXI_GP1* is wired to a `AXI2CSR` bridge.
 ### Linux Support
 
 - [ ] Device-tree overlay generator for iomem, irqs, firmware
+- [x] `bitstream-fix` to convert .bit file to a fpga-mgr compatible .bin
 
 Device-tree overlay is supported by Linux, currently *.dts* is crafted manually
 but shall be automatically generated.

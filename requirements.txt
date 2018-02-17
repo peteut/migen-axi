@@ -1,3 +1,5 @@
+click>=6.6
+numpy>=1.14
 git+https://github.com/peteut/pyramda.git#egg=pyramda
 git+https://github.com/peteut/migen.git#egg=migen
 git+https://github.com/peteut/misoc.git#egg=misoc
