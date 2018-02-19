@@ -1,6 +1,8 @@
 from enum import Enum
 from migen import Record, DIR_S_TO_M, DIR_M_TO_S, Module
 
+__all__ = ["Type", "Interface", "InterconnectPointToPoint"]
+
 Type = Enum("Type", "single burst flush reserved")
 
 # DMAC master, as per ARM DDI 0424D.

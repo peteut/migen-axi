@@ -5,6 +5,7 @@ from migen.sim import run_simulation
 from misoc.interconnect import csr_bus
 import pytest
 from migen_misc.interconnect import *  # noqa
+from migen_misc.interconnect import dmac_bus, stream2axi
 from .common import write_ack, wait_stb, ack, csr_w_mon, file_tmp_folder
 
 
@@ -154,6 +155,59 @@ def test_axi2csr(data_width):
 
     run_simulation(dut, testbench_axi2csr(),
                    vcd_name=file_tmp_folder("test_axi2csr.vcd"))
+
+
+def test_read_requester():
+    bus = dmac_bus.Interface()
+    dut = stream2axi._ReadRequester(bus)
+
+    def testbench_read_requester():
+        assert (yield bus.da.ready) == 1
+        yield bus.dr.ready.eq(1)
+        assert (yield bus.da.valid) == 0
+        yield dut.burst_request.eq(1)
+        yield
+
+        for _ in range(2):
+            assert (yield bus.dr.valid) == 1
+            assert (yield bus.dr.type) == dmac_bus.Type.burst.value
+            for __ in range(16):
+                yield
+                assert (yield bus.dr.valid) == 0
+
+            yield bus.da.valid.eq(1)
+            yield bus.da.type.eq(dmac_bus.Type.burst.value)
+            yield
+            yield bus.da.valid.eq(0)
+            yield
+
+        # single transfers
+        assert (yield bus.dr.valid) == 1
+        assert (yield bus.dr.type) == dmac_bus.Type.burst.value
+
+        for _ in range(16):
+            yield bus.da.valid.eq(1)
+            yield bus.da.type.eq(dmac_bus.Type.single.value)
+            yield
+            yield bus.da.valid.eq(0)
+            yield
+            # still in read mode?
+            assert (yield bus.dr.valid) == 0
+        # flush request
+        yield bus.da.valid.eq(1)
+        yield bus.da.type.eq(dmac_bus.Type.flush.value)
+        yield
+        yield bus.da.valid.eq(0)
+        yield
+        yield dut.burst_request.eq(0)
+        # flush ack
+        assert (yield bus.dr.valid) == 1
+        assert (yield bus.dr.type) == dmac_bus.Type.flush.value
+        yield
+        assert (yield bus.dr.valid) == 0
+
+    run_simulation(dut, testbench_read_requester(),
+                   vcd_name=file_tmp_folder("test_read_requester.vcd"))
 
 
 def test_countdown():

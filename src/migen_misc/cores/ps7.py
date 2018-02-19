@@ -5,7 +5,7 @@ import pyramda as R
 from migen import *  # noqa
 from migen.genlib.record import DIR_S_TO_M, DIR_M_TO_S, DIR_NONE
 from migen_misc.interconnect import Interface, InterconnectPointToPoint
-from migen_misc.interconnect import dmac
+from migen_misc.interconnect import dmac_bus
 from ..interconnect import wrshim
 
 
@@ -404,10 +404,10 @@ class PS7(Module):
         self.clock_domains.cd_sys = ClockDomain()
         self.clock_domains.cd_por = ClockDomain(reset_less=True)
 
-        self.dma0 = dmac.Interface(name="dma0")
-        self.dma1 = dmac.Interface(name="dma1")
-        self.dma2 = dmac.Interface(name="dma2")
-        self.dma3 = dmac.Interface(name="dma3")
+        self.dma0 = dmac_bus.Interface(name="dma0")
+        self.dma1 = dmac_bus.Interface(name="dma1")
+        self.dma2 = dmac_bus.Interface(name="dma2")
+        self.dma3 = dmac_bus.Interface(name="dma3")
 
         self.spi = Record([
             ("can1", 1),
