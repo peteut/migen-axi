@@ -205,6 +205,16 @@ def test_read_requester():
         assert (yield bus.dr.type) == dmac_bus.Type.flush.value
         yield
         assert (yield bus.dr.valid) == 0
+        # flush request when idle
+        yield bus.da.valid.eq(1)
+        yield
+        yield bus.da.valid.eq(0)
+        yield
+        # flush ack
+        assert (yield bus.dr.valid) == 1
+        assert (yield bus.dr.type) == dmac_bus.Type.flush.value
+        yield
+        assert (yield bus.dr.valid) == 0
 
     run_simulation(dut, testbench_read_requester(),
                    vcd_name=file_tmp_folder("test_read_requester.vcd"))
