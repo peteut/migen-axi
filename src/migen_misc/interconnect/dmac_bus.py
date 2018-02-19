@@ -1,5 +1,6 @@
 from enum import Enum
 from migen import Record, DIR_S_TO_M, DIR_M_TO_S, Module
+from .axi import write_ack, read_attrs
 
 __all__ = ["Type", "Interface", "InterconnectPointToPoint"]
 
@@ -26,6 +27,20 @@ _layout = [
 class Interface(Record):
     def __init__(self, name=None):
         super().__init__(_layout, name=name)
+
+    def write_da(self, type_):
+        yield self.da.type.eq(type_)
+        yield from write_ack(self.da)
+
+    def read_da(self):
+        return read_attrs(self.da)
+
+    def write_dr(self, type_):
+        yield self.dr.eq(type_)
+        yield from write_ack(self.dr)
+
+    def read_dr(self):
+        return read_attrs(self.dr)
 
 
 class InterconnectPointToPoint(Module):

@@ -1,4 +1,5 @@
 from operator import attrgetter
+import types
 from toolz.curried import *  # noqa
 from migen import *  # noqa
 from migen.sim import run_simulation
@@ -175,10 +176,7 @@ def test_read_requester():
                 yield
                 assert (yield bus.dr.valid) == 0
 
-            yield bus.da.valid.eq(1)
-            yield bus.da.type.eq(dmac_bus.Type.burst.value)
-            yield
-            yield bus.da.valid.eq(0)
+            yield from bus.write_da(dmac_bus.Type.burst.value)
             yield
 
         # single transfers
@@ -186,18 +184,12 @@ def test_read_requester():
         assert (yield bus.dr.type) == dmac_bus.Type.burst.value
 
         for _ in range(16):
-            yield bus.da.valid.eq(1)
-            yield bus.da.type.eq(dmac_bus.Type.single.value)
-            yield
-            yield bus.da.valid.eq(0)
+            yield from bus.write_da(dmac_bus.Type.single.value)
             yield
             # still in read mode?
             assert (yield bus.dr.valid) == 0
         # flush request
-        yield bus.da.valid.eq(1)
-        yield bus.da.type.eq(dmac_bus.Type.flush.value)
-        yield
-        yield bus.da.valid.eq(0)
+        yield from bus.write_da(dmac_bus.Type.flush.value)
         yield
         yield dut.burst_request.eq(0)
         # flush ack
@@ -206,9 +198,7 @@ def test_read_requester():
         yield
         assert (yield bus.dr.valid) == 0
         # flush request when idle
-        yield bus.da.valid.eq(1)
-        yield
-        yield bus.da.valid.eq(0)
+        yield from bus.write_da(dmac_bus.Type.flush.value)
         yield
         # flush ack
         assert (yield bus.dr.valid) == 1
@@ -218,6 +208,87 @@ def test_read_requester():
 
     run_simulation(dut, testbench_read_requester(),
                    vcd_name=file_tmp_folder("test_read_requester.vcd"))
+
+
+def test_stream2axi_writer():
+    bus = types.SimpleNamespace(
+        axi=axi.Interface(), dmac=dmac_bus.Interface())
+    dut = stream2axi.Writer(bus.axi, bus.dmac)
+
+    write_aw = partial(
+        bus.axi.write_aw,
+        size=burst_size(bus.axi.data_width // 8),
+        burst=Burst.fixed.value)
+    write_w = bus.axi.write_w
+    read_b = bus.axi.read_b
+    write_ar = partial(
+        bus.axi.write_ar,
+        size=burst_size(bus.axi.data_width // 8),
+        burst=Burst.fixed.value)
+    read_r = bus.axi.read_r
+
+    def testbench_stream2axi_writer():
+
+        def source():
+            sink = dut.sink
+            yield sink.stb.eq(1)
+            for i in range(32):
+                while (yield sink.ack) == 0:
+                    yield
+                yield sink.data.eq(i)
+                yield
+
+        def aw_channel():
+            assert (yield bus.axi.aw.ready) == 1
+            yield from write_aw(0x01, 0x00, len_=16 - 1)
+
+        def w_channel():
+            for _ in range(15):
+                yield from write_w(0, 0x11223344, last=0)
+            yield from write_w(0, 0x11223344, last=1)
+
+        def b_channel():
+            assert attrgetter_b((yield from read_b())) == (0x01, okay)
+
+        def ar_channel():
+            # wait for request
+            assert (yield from bus.dmac.read_dr()
+                    ).type == dmac_bus.Type.burst.value
+            yield from write_ar(0x11, 0, len_=16 - 1)
+            # write ack
+            yield from bus.dmac.write_da(dmac_bus.Type.burst.value)
+
+            # wait for request
+            assert (yield from bus.dmac.read_dr()
+                    ).type == dmac_bus.Type.burst.value
+            for i in range(10):
+                yield from write_ar(i, 0, len_=0)
+                # ack single tx
+                yield from bus.dmac.write_da(dmac_bus.Type.single.value)
+
+            # flush request
+            yield from bus.dmac.write_da(dmac_bus.Type.flush.value)
+            # wait for flush ack
+            assert (yield from bus.dmac.read_dr()
+                    ).type == dmac_bus.Type.flush.value
+
+        def r_channel():
+            yield bus.axi.r.ready.eq(1)
+            for i in range(15):
+                assert attrgetter_r((yield from read_r())) == (
+                    0x11, i, okay, 0)
+            assert attrgetter_r((yield from read_r())) == (0x11, 15, okay, 1)
+            for i in range(10):
+                assert attrgetter_r((yield from read_r())) == (
+                    i, i + 16, okay, 1)
+
+        return [
+            source(), aw_channel(), w_channel(), b_channel(),
+            ar_channel(), r_channel(),
+        ]
+
+    run_simulation(dut, testbench_stream2axi_writer(),
+                   vcd_name=file_tmp_folder("test_stream2axi_writer.vcd"))
 
 
 def test_countdown():
