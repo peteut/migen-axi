@@ -19,7 +19,7 @@ platform from [Migen][] is used as baseline and extended as necessary.
 - [x] P2P interconnect
 - [ ] InterconnectShared
 - [ ] Crossbar
-- [ ] DMAC PRI support (misoc.interconnect.stream -> DMAC | PRI)
+- [x] DMAC PRI support (misoc.interconnect.stream -> DMAC | PRI)
 
 
 By now only P2P interconnect is in actual use, where *M_AXI_GP0* is wired to a
