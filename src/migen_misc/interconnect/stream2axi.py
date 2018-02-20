@@ -62,7 +62,7 @@ class _ReadRequester(Module):
 
 
 class Writer(Module):
-    def __init__(self, bus, dmac_bus, fifo_depth=None):
+    def __init__(self, bus, bus_dmac, fifo_depth=None):
         ar, aw, w, r, b = attrgetter("ar", "aw", "w", "r", "b")(bus)
         dw = bus.data_width
         self.sink = stream.Endpoint(rec_layout(r, {"data"}))
@@ -70,7 +70,7 @@ class Writer(Module):
 
         ###
 
-        self.submodules.requester = requester = _ReadRequester(dmac_bus)
+        self.submodules.requester = requester = _ReadRequester(bus_dmac)
 
         fifo_depth = fifo_depth or BURST_LENGTH + DMAC_LATENCY
         if fifo_depth < BURST_LENGTH:
