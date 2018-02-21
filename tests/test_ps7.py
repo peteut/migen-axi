@@ -1,7 +1,7 @@
 import pytest
 from migen.sim import run_simulation
-from migen_misc.interconnect import Interface, wrshim
-from migen_misc.cores import ps7
+from migen_axi.interconnect import Interface, wrshim
+from migen_axi.cores import ps7
 
 rec = Interface()
 

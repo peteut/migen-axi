@@ -4,9 +4,8 @@ from toolz.curried import *  # noqa
 import pyramda as R
 from migen import *  # noqa
 from migen.genlib.record import DIR_S_TO_M, DIR_M_TO_S, DIR_NONE
-from migen_misc.interconnect import Interface, InterconnectPointToPoint
-from migen_misc.interconnect import dmac_bus
-from ..interconnect import wrshim
+from ..interconnect import (Interface, InterconnectPointToPoint, dmac_bus,
+                            wrshim)
 
 
 __all__ = ["PS7", "ddr_rec", "enet_rec"]

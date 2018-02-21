@@ -1,4 +1,4 @@
-from migen_misc.platforms import zedboard
+from migen_axi.platforms import zedboard
 
 
 def test_zedboard():

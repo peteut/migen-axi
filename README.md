@@ -1,9 +1,9 @@
-## Migen Misc
+## Migen AXI
 
-[![Build Status](https://travis-ci.org/peteut/migen-misc.svg)](
-https://travis-ci.org/peteut/migen-misc)
-[![Coverage Status](https://coveralls.io/repos/peteut/migen-misc/badge.svg)](
-https://coveralls.io/r/peteut/migen-misc)
+[![Build Status](https://travis-ci.org/peteut/migen-axi.svg)](
+https://travis-ci.org/peteut/migen-axi)
+[![Coverage Status](https://coveralls.io/repos/peteut/migen-axi/badge.svg)](
+https://coveralls.io/r/peteut/migen-axi)
 
 This repo contains some [Migen][] modules created to support some [MiSoC][] features
 on the [Xilinx Zynq SoC][]. A *Zedboard* is used for testing, the existing

@@ -1,6 +1,6 @@
 from toolz.curried import *  # noqa
 from misoc.interconnect import stream
-from migen_misc.interconnect import axi, Reader
+from migen_axi.interconnect import axi, Reader
 from .common import write_ack, wait_stb, file_tmp_folder
 from migen.sim import run_simulation
 

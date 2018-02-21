@@ -1,5 +1,5 @@
-from migen_misc.platforms import zedboard
-from migen_misc.integration import SoCCore
+from migen_axi.platforms import zedboard
+from migen_axi.integration import SoCCore
 
 
 def test_soc_core():

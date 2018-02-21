@@ -2,9 +2,9 @@ from types import SimpleNamespace
 from migen import *  # noqa
 from misoc.cores import identifier
 from misoc.integration.wb_slaves import WishboneSlaveManager as SlaveManager
-from migen_misc.interconnect import axi, axi2csr
-from migen_misc.cores import ps7
 from misoc.interconnect import csr_bus
+from ..interconnect import axi, axi2csr
+from ..cores import ps7
 
 
 def interrupt2irq_id(idx):

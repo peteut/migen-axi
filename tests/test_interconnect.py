@@ -5,8 +5,8 @@ from migen import *  # noqa
 from migen.sim import run_simulation
 from misoc.interconnect import csr_bus
 import pytest
-from migen_misc.interconnect import *  # noqa
-from migen_misc.interconnect import dmac_bus, stream2axi
+from migen_axi.interconnect import *  # noqa
+from migen_axi.interconnect import dmac_bus, stream2axi
 from .common import write_ack, wait_stb, ack, csr_w_mon, file_tmp_folder
 
 
