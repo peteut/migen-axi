@@ -2,6 +2,7 @@ from operator import attrgetter, or_
 from migen import *  # noqa
 from migen.genlib.fifo import SyncFIFO
 from misoc.interconnect import stream
+from misoc.interconnect.csr import AutoCSR, CSRStatus
 from . import dmac_bus
 from . import axi
 from .axi import rec_layout
@@ -10,9 +11,10 @@ BURST_LENGTH = 16
 DMAC_LATENCY = 2
 
 
-class _ReadRequester(Module):
+class _ReadRequester(Module, AutoCSR):
     def __init__(self, bus):
         self.burst_request = Signal()
+        self._status = CSRStatus(3)
 
         ###
 
@@ -20,10 +22,15 @@ class _ReadRequester(Module):
         burst_type = dmac_bus.Type.burst.value
         flush_type = dmac_bus.Type.flush.value
 
+        self.comb += [
+            self._status.status[0].eq(self.burst_request),
+        ]
+
         # control
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
         fsm.act(
             "IDLE",
+            self._status.status[1].eq(1),
             If(
                 da.valid & (da.type == flush_type),
                 NextState("ACK_FLUSH"),
@@ -48,6 +55,7 @@ class _ReadRequester(Module):
         )
         fsm.act(
             "READ",
+            self._status.status[2].eq(1),
             If(
                 da.valid & (da.type == burst_type),
                 NextState("IDLE"),
@@ -61,7 +69,7 @@ class _ReadRequester(Module):
         ]
 
 
-class Writer(Module):
+class Writer(Module, AutoCSR):
     def __init__(self, bus, bus_dmac, fifo_depth=None):
         ar, aw, w, r, b = attrgetter("ar", "aw", "w", "r", "b")(bus)
         dw = bus.data_width
