@@ -459,6 +459,8 @@ class PS7(Module):
         self.comb += [i.aclk.eq(ClockSignal()) for i in s_axi_hp_global]
         dma_global = [
             dma_global_rec(name="dma{}".format(i)) for i in range(4)]
+        [setattr(self, "dma{}_rst_n".format(i), rec.rst_n)
+         for i, rec in enumerate(dma_global)]
         self.comb += [i.aclk.eq(ClockSignal()) for i in dma_global]
 
         self.submodules.enet0 = ClockDomainsRenamer(
