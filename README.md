@@ -19,8 +19,7 @@ platform from [Migen][] is used as baseline and extended as necessary.
 - [x] P2P interconnect
 - [ ] InterconnectShared
 - [ ] Crossbar
-- [x] DMAC PRI support (misoc.interconnect.stream -> DMAC | PRI)
-
+- [x] Writer, *AXI3 Slave + CoreLink DMA-330 DMA Controller Peripheral Request Interface (PRI)*
 
 By now only P2P interconnect is in actual use, where *M_AXI_GP0* is wired to a
 custom AXI3 slave and *M_AXI_GP1* is wired to a `AXI2CSR` bridge.
