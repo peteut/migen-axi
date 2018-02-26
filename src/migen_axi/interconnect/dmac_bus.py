@@ -4,7 +4,7 @@ from .axi import write_ack, read_attrs
 
 __all__ = ["Type", "Interface", "InterconnectPointToPoint"]
 
-Type = Enum("Type", "single burst flush reserved")
+Type = Enum("Type", "single burst flush reserved", start=0)
 
 # DMAC master, as per ARM DDI 0424D.
 _layout = [
