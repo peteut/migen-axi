@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from toolz.curried import *  # noqa
 import pyramda as R
 from migen import *  # noqa
+from migen.genlib.cdc import MultiReg
 from migen.genlib.record import DIR_S_TO_M, DIR_M_TO_S, DIR_NONE
 from ..interconnect import (Interface, InterconnectPointToPoint, dmac_bus,
                             wrshim)
@@ -395,11 +396,6 @@ class PS7(Module):
         self.ddr_arb = Signal(4)
         self.mio = Signal(54)
 
-        self.clock_domains.cd_fclk0 = ClockDomain()
-        self.clock_domains.cd_fclk1 = ClockDomain()
-        self.clock_domains.cd_fclk2 = ClockDomain()
-        self.clock_domains.cd_fclk3 = ClockDomain()
-
         self.clock_domains.cd_sys = ClockDomain()
         self.clock_domains.cd_por = ClockDomain(reset_less=True)
 
@@ -473,12 +469,6 @@ class PS7(Module):
         ddr_buf, ps_buf = ddr_rec(name="ddr"), ps_rec(name="ps")
         mio_buf = Signal(len(self.mio))
 
-        self.comb += [
-            ClockSignal().eq(self.cd_fclk0.clk),
-            ResetSignal().eq(self.cd_fclk0.rst),
-            ClockSignal("por").eq(ps_buf.por_b),
-        ]
-
         pads_ddr_v = Signal(len(pads.ddr))
         ddr_buf_v = Signal(len(ddr_buf))
         self.comb += [
@@ -500,14 +490,18 @@ class PS7(Module):
             InterconnectPointToPoint(self.s_axi_gp1, s_axi_gp1_shim),
         ]
 
-        fclk = fclk_rec()
+        self.fclk = fclk_rec()
+        reset_asyc = Signal()
+        # fclk.reset_n considered async
+        self.comb += reset_asyc.eq(~self.fclk.reset_n[0])
+        reset = Signal()
         self.specials += [
-            bufg([c, ClockSignal("fclk{}".format(i))]) for
-            i, c in enumerate(fclk.clk)]
-        self.comb += [fclk.clktrig_n.eq(0)]
-        self.comb += [
-            ResetSignal("fclk{}".format(i)).eq(~rst_n) for i, rst_n
-            in enumerate(fclk.reset_n)]
+            MultiReg(reset_asyc, reset),
+            bufg([self.fclk.clk[0], ClockSignal()]),
+            bufg([reset, ResetSignal()]),
+        ]
+
+        self.comb += self.fclk.clktrig_n.eq(0)
         ftmd = ftmd_rec()
         ftmt = ftmt_rec()
         irq = irq_rec()
@@ -564,7 +558,7 @@ class PS7(Module):
             connect_interface(self.usb0),
             connect_interface(self.usb1),
             connect_interface(self.sram),
-            connect_interface(fclk),
+            connect_interface(self.fclk),
             dict(i_FPGAIDLEN=self.fpga_idle_n),
             connect_interface(self.event),
             dict(i_DDRARB=self.ddr_arb),
@@ -612,11 +606,3 @@ class PS7(Module):
             keymap(str_replace("EVENTI", "EVENTEVENTI")),
         )
         self.specials += Instance("PS7", **ps7_attrs)
-
-
-class Top(Module):
-    def __init__(self, platform):
-        self.submodules.ps7 = PS7(SimpleNamespace(
-            ps=platform.request("ps"),
-            ddr=platform.request("ddr"),
-        ))
