@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from toolz.curried import *  # noqa
 import pyramda as R
 from migen import *  # noqa
-from migen.genlib.cdc import MultiReg
+from migen.genlib.resetsync import AsyncResetSynchronizer
 from migen.genlib.record import DIR_S_TO_M, DIR_M_TO_S, DIR_NONE
 from ..interconnect import (Interface, InterconnectPointToPoint, dmac_bus,
                             wrshim)
@@ -491,14 +491,10 @@ class PS7(Module):
         ]
 
         self.fclk = fclk_rec()
-        reset_asyc = Signal()
         # fclk.reset_n considered async
-        self.comb += reset_asyc.eq(~self.fclk.reset_n[0])
-        reset = Signal()
         self.specials += [
-            MultiReg(reset_asyc, reset),
+            AsyncResetSynchronizer(self.cd_sys, ~self.fclk.reset_n[0]),
             bufg([self.fclk.clk[0], ClockSignal()]),
-            bufg([reset, ResetSignal()]),
         ]
 
         self.comb += self.fclk.clktrig_n.eq(0)
