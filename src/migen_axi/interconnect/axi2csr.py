@@ -1,5 +1,4 @@
 from operator import attrgetter
-from toolz.curried import *  # noqa
 from migen import *  # noqa
 from . import axi
 from misoc.interconnect import csr_bus
