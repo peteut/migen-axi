@@ -1,0 +1,19 @@
+{
+    "name": "migen-axi",
+    "version": "1.0.0",
+    "main": "index.js",
+    "repository": "git@github.com:peteut/migen-axi.git",
+    "author": "Alain Péteut <alain.peteut@spacetek.ch>",
+    "license": "MIT",
+    "devDependencies": {
+        "wavedrom-cli": "^0.5.0"
+    },
+    "scripts": {
+        "wavedrom": "phantomjs ./node_modules/.bin/wavedrom",
+        "wavedrom:gpmc-burst-wr": "yarn run wavedrom -i ./specs/gpmc_burst_wr.js -p ./specs/gpmc_burst_wr.png",
+        "wavedrom:gpmc-burst-rd": "yarn run wavedrom -i ./specs/gpmc_burst_rd.js -p ./specs/gpmc_burst_rd.png"
+    },
+    "dependencies": {
+        "phantomjs-prebuilt": "^2.1.16"
+    }
+}

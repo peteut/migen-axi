@@ -10,6 +10,6 @@ install:
     - pip install setuptools==26.1
     - pip install coveralls
 script:
-    - tox
+    - tox -v -- -v
 after_success:
     - coveralls

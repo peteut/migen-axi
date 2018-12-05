@@ -7,6 +7,7 @@ from misoc.interconnect import csr_bus
 import pytest
 from migen_axi.interconnect import *  # noqa
 from migen_axi.interconnect import dmac_bus, stream2axi
+from migen_axi.interconnect import gpmc2axi
 from .common import write_ack, wait_stb, ack, csr_w_mon, file_tmp_folder
 
 
@@ -584,3 +585,49 @@ def test_transaction_arbiter():
     run_simulation(
         dut, testbench_transaction_arbiter(),
         vcd_name=file_tmp_folder("test_transaction_arbiter.vcd"))
+
+
+def test_gpmc2axi_interface():
+    dut = CEInserter(["gpmc"])(gpmc2axi.GPMC2AXI())
+    dut.comb += dut.ce_gpmc.eq(~dut.gpmc.cs_n)
+
+    WR_ADR, RD_ADR = 0xff5500, 0x55ff00
+
+    def testbench_gmc2axi():
+        def init():
+            yield dut.gpmc.cs_n.eq(1)
+            yield dut.gpmc.adv_n.eq(1)
+            yield dut.gpmc.oe_n.eq(1)
+            yield dut.gpmc.we_n.eq(1)
+            yield dut.gpmc.dir.eq(0)
+            yield from gpmc2axi.rising_edge("gpmc")
+
+        def rw_request():
+            yield from init()
+            yield from dut.gpmc.write("gpmc", WR_ADR, range(4))
+            yield
+            assert (yield from dut.gpmc.read("gpmc", RD_ADR, burst=8))
+            yield
+
+        def _wait_for_adv():
+            while True:
+                yield from gpmc2axi.rising_edge("gpmc")
+                if (yield dut.gpmc.adv_n) == 0 and (yield dut.gpmc.cs_n) == 0:
+                    break
+
+        def check_adr():
+            yield from _wait_for_adv()
+            assert (
+                (yield dut.gpmc.a) << 17 | (yield dut.gpmc.ad) << 1) == WR_ADR
+
+            yield from _wait_for_adv()
+            assert (
+                (yield dut.gpmc.a) << 17 | (yield dut.gpmc.ad) << 1) == RD_ADR
+
+        return [rw_request(), check_adr()]
+
+    run_simulation(
+        dut,
+        testbench_gmc2axi(),
+        clocks=dict(sys=5, gpmc=20),
+        vcd_name=file_tmp_folder("test_gpmc2axi_interface.vcd"))
