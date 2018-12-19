@@ -210,7 +210,7 @@ def test_read_requester():
                    vcd_name=file_tmp_folder("test_read_requester.vcd"))
 
 
-def test_stream2axi_writer():
+def test_stream2axi_writer():  # noqa
     bus = types.SimpleNamespace(
         axi=axi.Interface(), dmac=dmac_bus.Interface())
     dut = stream2axi.Writer(bus.axi, bus.dmac)
@@ -584,3 +584,42 @@ def test_transaction_arbiter():
     run_simulation(
         dut, testbench_transaction_arbiter(),
         vcd_name=file_tmp_folder("test_transaction_arbiter.vcd"))
+
+
+def test_incr():
+    bus = axi.Interface()
+    dut = Incr(bus.aw)
+
+    def _test_fixed():
+        yield from bus.write_aw(
+            0, 0xff100, 16 - 1, burst_size(4), Burst.fixed.value)
+        assert (yield dut.addr) == 0xff100
+
+    def _test_incr():
+        yield from bus.write_aw(
+            0, 0xff101, 16 - 1, burst_size(4), Burst.incr.value)
+        assert (yield dut.addr) == 0xff104
+
+    def _test_wrap():
+        yield from bus.write_aw(
+            0, 0xff100, 16 - 1, burst_size(4), Burst.wrap.value)
+        assert (yield dut.addr) == 0xff104
+        wrap_boundary = int(0xff100 / (16 * 4)) * 16 * 4
+        yield from bus.write_aw(
+            0, wrap_boundary + 14 * 4, 16 - 1,
+            burst_size(4), Burst.wrap.value)
+        assert (yield dut.addr) == wrap_boundary + 15 * 4
+        yield from bus.write_aw(
+            0, wrap_boundary + 15 * 4, 16 - 1,
+            burst_size(4), Burst.wrap.value)
+        assert (yield dut.addr) == wrap_boundary
+
+    def testbench_incr():
+        yield bus.aw.ready.eq(1)
+        yield from _test_fixed()
+        yield from _test_incr()
+        yield from _test_wrap()
+
+    run_simulation(
+        dut, testbench_incr(),
+        vcd_name=file_tmp_folder("test_incr.vcd"))
