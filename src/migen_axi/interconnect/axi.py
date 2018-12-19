@@ -13,7 +13,7 @@ from misoc.interconnect import stream
 __all__ = ["Burst", "Alock", "Response",
            "burst_size", "rec_layout", "layout_rename_item",
            "connect_sink_hdshk", "connect_source_hdshk",
-           "Interface", "InterconnectPointToPoint"]
+           "Interface", "InterconnectPointToPoint", "Incr"]
 
 Burst = Enum("Burst", "fixed incr wrap reserved", start=0)
 
@@ -28,7 +28,7 @@ _layout = [
     ("aw", [
         ("id", "id_width", DIR_M_TO_S),  # write address ID
         ("addr", "addr_width", DIR_M_TO_S),  # write address
-        ("len", 4, DIR_M_TO_S),  # burst length
+        ("len", 8, DIR_M_TO_S),  # burst length
         ("size", 3, DIR_M_TO_S),  # burst size
         ("burst", 2, DIR_M_TO_S),  # burst type
         ("lock", 2, DIR_M_TO_S),  # lock type
@@ -58,7 +58,7 @@ _layout = [
     ("ar", [
         ("id", "id_width", DIR_M_TO_S),  # read address ID
         ("addr", "addr_width", DIR_M_TO_S),  # read address
-        ("len", 4, DIR_M_TO_S),  # burst length
+        ("len", 8, DIR_M_TO_S),  # burst length
         ("size", 3, DIR_M_TO_S),  # burst size
         ("burst", 2, DIR_M_TO_S),  # burst type
         ("lock", 2, DIR_M_TO_S),  # lock type
@@ -232,6 +232,52 @@ class Interface(Record):
 class InterconnectPointToPoint(Module):
     def __init__(self, master, slave):
         self.comb += master.connect(slave)
+
+
+class Incr(Module):
+    def __init__(self, a_chan, data_width=32):
+        self.addr = Signal.like(a_chan.addr)
+
+        ###
+        byte_per_word = data_width // 8
+
+        high_cat = a_chan.addr[12:] if len(a_chan.addr) > 12 else C(0)
+        base = Signal(12)
+        size_value = Signal(byte_per_word)
+        base_incr = Signal.like(base)
+        align_msk_a = Array(
+            C(((1 << byte_per_word) - 1) ^ ((1 << i) - 1),
+              log2_int(byte_per_word)) for i in range(2**len(a_chan.size)))
+        wrap_case_len = Signal(bits_for(3))
+        wrap_case_max = 3 + bits_for(byte_per_word)
+        wrap_case = Signal(bits_for(wrap_case_max + 1))
+        wrap_a = Array(Signal(12) for _ in range(wrap_case_max))
+
+        self.comb += [
+            base.eq(Cat(
+                align_msk_a[a_chan.size] & a_chan.addr[:len(align_msk_a[0])],
+                a_chan.addr[len(align_msk_a[0]):12])),
+            Case(
+                a_chan.size,
+                {i: size_value.eq(1 << i) for i in range(byte_per_word)}),
+            base_incr.eq(base + size_value),
+            If(a_chan.len[3], wrap_case_len.eq(3))
+            .Elif(a_chan.len[2], wrap_case_len.eq(2))
+            .Elif(a_chan.len[1], wrap_case_len.eq(1))
+            .Else(wrap_case_len.eq(0)),
+            wrap_case.eq(a_chan.size + wrap_case_len),
+            Case(
+                a_chan.burst,
+                {
+                    Burst.fixed.value: self.addr.eq(a_chan.addr),
+                    Burst.wrap.value: [
+                        Case(
+                            wrap_case,
+                            {i: wrap_a[i].eq(
+                                Cat(base_incr[:i + 1], base[1 + i:]))
+                                for i in range(wrap_case_max)}),
+                        self.addr.eq(Cat(wrap_a[wrap_case], high_cat))],
+                    "default": self.addr.eq(Cat(base_incr, high_cat))})]
 
 
 class AddressDecoder(Module):
