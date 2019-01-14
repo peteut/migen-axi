@@ -1,6 +1,8 @@
 click>=6.6
 numpy>=1.14
-git+https://github.com/peteut/pyramda.git#egg=pyramda
+-rhttps://raw.githubusercontent.com/peteut/ramda.py/master/requirements.txt
+git+https://github.com/peteut/ramda.py.git#egg=ramda
+-rhttps://raw.githubusercontent.com/peteut/migen/master/requirements.txt
 git+https://github.com/peteut/migen.git#egg=migen
 git+https://github.com/peteut/misoc.git#egg=misoc
 

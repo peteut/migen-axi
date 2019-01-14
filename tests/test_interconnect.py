@@ -62,15 +62,6 @@ def test_response(attr, value):
 
 
 @pytest.mark.parametrize(
-    "layout, current_name, new_name, new_layout", [
-        ([("foo", 1), ("foobar", 2)], "foo", "bar",
-         [("bar", 1), ("foobar", 2)]),
-    ])
-def test_layout_rename_item(layout, current_name, new_name, new_layout):
-    assert layout_rename_item(layout, current_name, new_name) == new_layout
-
-
-@pytest.mark.parametrize(
     "data_width", [
         8,
         16,

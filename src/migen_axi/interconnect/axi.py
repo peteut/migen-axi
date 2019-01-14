@@ -3,7 +3,7 @@ from enum import Enum
 import operator
 import math
 from toolz.curried import *  # noqa
-import pyramda as R
+import ramda as R
 from migen import *  # noqa
 from migen.genlib import roundrobin
 from migen.genlib import coding
@@ -11,7 +11,7 @@ from migen.genlib.record import set_layout_parameters
 from misoc.interconnect import stream
 
 __all__ = ["Burst", "Alock", "Response",
-           "burst_size", "rec_layout", "layout_rename_item",
+           "burst_size", "rec_layout",
            "connect_sink_hdshk", "connect_source_hdshk",
            "Interface", "InterconnectPointToPoint", "Incr"]
 
@@ -121,21 +121,6 @@ def rec_layout(rec, items):
     return pipe(
         rec.layout,
         filter(comp(partial(operator.contains, items), first)), list)
-
-
-def layout_rename_item(layout, current_name, new_name):
-    return pipe(
-        layout,
-        map(
-            R.if_else(
-                comp(operator.is_(current_name), first),
-                comp(
-                    tuple,
-                    partial(concatv, [new_name]),
-                    comp(list, drop(1))),
-                identity),
-        ),
-        list)
 
 
 def read_attrs(ch):

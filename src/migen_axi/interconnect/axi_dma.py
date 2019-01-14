@@ -2,7 +2,7 @@ import operator
 from toolz.curried import *  # noqa
 from migen import *  # noqa
 from misoc.interconnect import stream
-import pyramda as R
+import ramda as R
 from .axi import rec_layout, Burst, connect_source_hdshk, burst_size
 
 

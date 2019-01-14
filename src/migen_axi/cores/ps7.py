@@ -1,7 +1,7 @@
 import operator
 from types import SimpleNamespace
 from toolz.curried import *  # noqa
-import pyramda as R
+import ramda as R
 from migen import *  # noqa
 from migen.genlib.resetsync import AsyncResetSynchronizer
 from migen.genlib.record import DIR_S_TO_M, DIR_M_TO_S, DIR_NONE
