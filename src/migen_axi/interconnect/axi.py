@@ -220,37 +220,47 @@ class InterconnectPointToPoint(Module):
 
 
 class Incr(Module):
+    ""
     def __init__(self, a_chan, data_width=32):
         self.addr = Signal.like(a_chan.addr)
+        assert len(a_chan.addr) >= 12
 
         ###
+
         byte_per_word = data_width // 8
+
+        max_size = bits_for(byte_per_word)
+        valid_size_width = bits_for(max_size) + 1
+        valid_size = a_chan.size[:valid_size_width]
 
         high_cat = a_chan.addr[12:] if len(a_chan.addr) > 12 else C(0)
         base = Signal(12)
         size_value = Signal(byte_per_word)
         base_incr = Signal.like(base)
-        align_msk_a = Array(
-            C(((1 << byte_per_word) - 1) ^ ((1 << i) - 1),
-              log2_int(byte_per_word)) for i in range(2**len(a_chan.size)))
-        wrap_case_len = Signal(bits_for(3))
-        wrap_case_max = 3 + bits_for(byte_per_word)
-        wrap_case = Signal(bits_for(wrap_case_max + 1))
+        align_msk = Signal(12)
+        self.comb += [s.eq(i < valid_size) for i, s
+                      in enumerate(align_msk[:max_size - 1])]
+        wrap_case_len = Signal(max=3)
+        # 3 is the maximum of wrap_case_len
+        wrap_case_max = max_size + 3
+        wrap_case_width = bits_for(wrap_case_max + 1)
+        wrap_case = Signal(wrap_case_width)
         wrap_a = Array(Signal(12) for _ in range(wrap_case_max))
 
         self.comb += [
-            base.eq(Cat(
-                align_msk_a[a_chan.size] & a_chan.addr[:len(align_msk_a[0])],
-                a_chan.addr[len(align_msk_a[0]):12])),
+            base.eq(a_chan.addr[:12] & ~align_msk),
+            # size_value
             Case(
-                a_chan.size,
-                {i: size_value.eq(1 << i) for i in range(byte_per_word)}),
+                valid_size,
+                {i: size_value.eq(1 << i)
+                 for i in range(max_size)}),
             base_incr.eq(base + size_value),
+            # wrap_cap_case_len
             If(a_chan.len[3], wrap_case_len.eq(3))
             .Elif(a_chan.len[2], wrap_case_len.eq(2))
             .Elif(a_chan.len[1], wrap_case_len.eq(1))
             .Else(wrap_case_len.eq(0)),
-            wrap_case.eq(a_chan.size + wrap_case_len),
+            wrap_case.eq(valid_size[:wrap_case_width] + wrap_case_len),
             Case(
                 a_chan.burst,
                 {
