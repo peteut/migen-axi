@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from enum import Enum
+from enum import IntEnum
 import operator
 import math
 from toolz.curried import *  # noqa
@@ -15,11 +15,11 @@ __all__ = ["Burst", "Alock", "Response",
            "connect_sink_hdshk", "connect_source_hdshk",
            "Interface", "InterconnectPointToPoint", "Incr"]
 
-Burst = Enum("Burst", "fixed incr wrap reserved", start=0)
+Burst = IntEnum("Burst", "fixed incr wrap reserved", start=0)
 
-Alock = Enum("Alock", "normal_access exclusive_access", start=0)
+Alock = IntEnum("Alock", "normal_access exclusive_access", start=0)
 
-Response = Enum("Response", "okay exokay slverr decerr", start=0)
+Response = IntEnum("Response", "okay exokay slverr decerr", start=0)
 
 burst_size = comp(int, math.log2)
 
@@ -151,7 +151,7 @@ class Interface(Record):
             R.apply(partial(Interface, name=name)))
 
     def write_aw(self, id_, addr, len_, size, burst,
-                 lock=Alock.normal_access.value, cache=0,
+                 lock=Alock.normal_access, cache=0,
                  prot=0, qos=0):
         yield self.aw.id.eq(id_)
         yield self.aw.addr.eq(addr)
@@ -181,13 +181,13 @@ class Interface(Record):
     def read_b(self):
         return read_attrs(self.b)
 
-    def write_b(self, id_, resp=Response.okay.value):
+    def write_b(self, id_, resp=Response.okay):
         yield self.b.id.eq(id_)
         yield self.b.resp.eq(resp)
         yield from write_ack(self.b)
 
     def write_ar(self, id_, addr, len_, size, burst,
-                 lock=Alock.normal_access.value, cache=0,
+                 lock=Alock.normal_access, cache=0,
                  prot=0, qos=0):
         yield self.ar.id.eq(id_)
         yield self.ar.addr.eq(addr)
@@ -203,7 +203,7 @@ class Interface(Record):
     def read_ar(self):
         return read_attrs(self.ar)
 
-    def write_r(self, id_, data, resp=Response.okay.value, last=0):
+    def write_r(self, id_, data, resp=Response.okay, last=0):
         yield self.r.id.eq(id_)
         yield self.r.data.eq(data)
         yield self.r.resp.eq(resp)
@@ -264,8 +264,8 @@ class Incr(Module):
             Case(
                 a_chan.burst,
                 {
-                    Burst.fixed.value: self.addr.eq(a_chan.addr),
-                    Burst.wrap.value: [
+                    Burst.fixed: self.addr.eq(a_chan.addr),
+                    Burst.wrap: [
                         Case(
                             wrap_case,
                             {i: wrap_a[i].eq(

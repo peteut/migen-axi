@@ -81,8 +81,8 @@ class AXI2CSR(Module):
         self.comb += [
             r.id.eq(id_),
             b.id.eq(id_),
-            r.resp.eq(axi.Response.okay.value),
-            b.resp.eq(axi.Response.okay.value),
+            r.resp.eq(axi.Response.okay),
+            b.resp.eq(axi.Response.okay),
             r.last.eq(1),
         ]
         self.sync += [

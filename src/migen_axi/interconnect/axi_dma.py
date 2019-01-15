@@ -164,7 +164,7 @@ class Reader(Module):
             self.sink.ack.eq(~sink_acked & remaining.done),
             ar.len.eq(fifo_depth - 1),
             ar.size.eq(burst_size(dw // 8)),
-            ar.burst.eq(Burst.incr.value),
+            ar.burst.eq(Burst.incr),
             # ensure FIFO is clear to not stall the bus
             ar.valid.eq(~ar_acked & ~rfifo.source.stb)
         ]
@@ -211,7 +211,7 @@ class Writer(Module):
         self.comb += [
             aw.len.eq(fifo_depth - 1),
             aw.size.eq(burst_size(dw // 8)),
-            aw.burst.eq(Burst.incr.value),
+            aw.burst.eq(Burst.incr),
         ]
         self.sync += [
             If(

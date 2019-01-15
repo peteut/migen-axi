@@ -1,10 +1,10 @@
-from enum import Enum
+from enum import IntEnum
 from migen import Record, DIR_S_TO_M, DIR_M_TO_S, Module
 from .axi import write_ack, read_attrs
 
 __all__ = ["Type", "Interface", "InterconnectPointToPoint"]
 
-Type = Enum("Type", "single burst flush reserved", start=0)
+Type = IntEnum("Type", "single burst flush reserved", start=0)
 
 # DMAC master, as per ARM DDI 0424D.
 _layout = [

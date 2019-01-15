@@ -33,8 +33,8 @@ class _ReadRequester(Module, AutoCSR):
         ###
 
         dr, da = attrgetter("dr", "da")(bus)
-        burst_type = dmac_bus.Type.burst.value
-        flush_type = dmac_bus.Type.flush.value
+        burst_type = dmac_bus.Type.burst
+        flush_type = dmac_bus.Type.flush
 
         # control
         self.submodules.fsm = fsm = FSM(reset_state="IDLE")
@@ -210,8 +210,8 @@ class Writer(Module, AutoCSR):
             r.last.eq(cnt == 0),
             r.id.eq(id_),
             b.id.eq(id_),
-            r.resp.eq(axi.Response.okay.value),
-            b.resp.eq(axi.Response.okay.value),
+            r.resp.eq(axi.Response.okay),
+            b.resp.eq(axi.Response.okay),
             r.data.eq(fifo.dout),
             fifo.re.eq(r.valid & r.ready),
         ]

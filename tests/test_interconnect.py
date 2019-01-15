@@ -22,7 +22,7 @@ attrgetter_aw = attrgetter("addr", "len", "burst")
 
 attrgetter_ar = attrgetter("addr", "len", "burst")
 
-okay = Response.okay.value
+okay = Response.okay
 
 
 @pytest.mark.parametrize(
@@ -40,7 +40,7 @@ def test_burst_size(n_bytes, size):
         ("incr", 1),
     ])
 def test_burst(attr, value):
-    assert getattr(Burst, attr).value == value
+    assert getattr(Burst, attr) == value
 
 
 @pytest.mark.parametrize(
@@ -49,7 +49,7 @@ def test_burst(attr, value):
         ("exclusive_access", 1),
     ])
 def test_alock(attr, value):
-    assert getattr(Alock, attr).value == value
+    assert getattr(Alock, attr) == value
 
 
 @pytest.mark.parametrize(
@@ -58,7 +58,7 @@ def test_alock(attr, value):
         ("exokay", 1),
     ])
 def test_response(attr, value):
-    assert getattr(Response, attr).value == value
+    assert getattr(Response, attr) == value
 
 
 @pytest.mark.parametrize(
@@ -75,13 +75,13 @@ def test_axi2csr(data_width):
     write_aw = partial(
         dut.bus.write_aw,
         size=burst_size(dut.bus.data_width // 8), len_=0,
-        burst=Burst.fixed.value)
+        burst=Burst.fixed)
     write_w = dut.bus.write_w
     read_b = dut.bus.read_b
     write_ar = partial(
         dut.bus.write_ar,
         size=burst_size(dut.bus.data_width // 8), len_=0,
-        burst=Burst.fixed.value)
+        burst=Burst.fixed)
     read_r = dut.bus.read_r
     w_mon = partial(csr_w_mon, dut.csr)
 
@@ -162,38 +162,38 @@ def test_read_requester():
 
         for _ in range(2):
             assert (yield bus.dr.valid) == 1
-            assert (yield bus.dr.type) == dmac_bus.Type.burst.value
+            assert (yield bus.dr.type) == dmac_bus.Type.burst
             for __ in range(16):
                 yield
                 assert (yield bus.dr.valid) == 0
 
-            yield from bus.write_da(dmac_bus.Type.burst.value)
+            yield from bus.write_da(dmac_bus.Type.burst)
             yield
 
         # single transfers
         assert (yield bus.dr.valid) == 1
-        assert (yield bus.dr.type) == dmac_bus.Type.burst.value
+        assert (yield bus.dr.type) == dmac_bus.Type.burst
 
         for _ in range(16):
-            yield from bus.write_da(dmac_bus.Type.single.value)
+            yield from bus.write_da(dmac_bus.Type.single)
             yield
             # still in read mode?
             assert (yield bus.dr.valid) == 0
         # flush request
-        yield from bus.write_da(dmac_bus.Type.flush.value)
+        yield from bus.write_da(dmac_bus.Type.flush)
         yield
         yield dut.burst_request.eq(0)
         # flush ack
         assert (yield bus.dr.valid) == 1
-        assert (yield bus.dr.type) == dmac_bus.Type.flush.value
+        assert (yield bus.dr.type) == dmac_bus.Type.flush
         yield
         assert (yield bus.dr.valid) == 0
         # flush request when idle
-        yield from bus.write_da(dmac_bus.Type.flush.value)
+        yield from bus.write_da(dmac_bus.Type.flush)
         yield
         # flush ack
         assert (yield bus.dr.valid) == 1
-        assert (yield bus.dr.type) == dmac_bus.Type.flush.value
+        assert (yield bus.dr.type) == dmac_bus.Type.flush
         yield
         assert (yield bus.dr.valid) == 0
 
@@ -209,13 +209,13 @@ def test_stream2axi_writer():  # noqa
     write_aw = partial(
         bus.axi.write_aw,
         size=burst_size(bus.axi.data_width // 8),
-        burst=Burst.fixed.value)
+        burst=Burst.fixed)
     write_w = bus.axi.write_w
     read_b = bus.axi.read_b
     write_ar = partial(
         bus.axi.write_ar,
         size=burst_size(bus.axi.data_width // 8),
-        burst=Burst.fixed.value)
+        burst=Burst.fixed)
     read_r = bus.axi.read_r
 
     def testbench_stream2axi_writer():
@@ -244,24 +244,24 @@ def test_stream2axi_writer():  # noqa
         def ar_channel():
             # wait for request
             assert (yield from bus.dmac.read_dr()
-                    ).type == dmac_bus.Type.burst.value
+                    ).type == dmac_bus.Type.burst
             yield from write_ar(0x11, 0, len_=16 - 1)
             # write ack
-            yield from bus.dmac.write_da(dmac_bus.Type.burst.value)
+            yield from bus.dmac.write_da(dmac_bus.Type.burst)
 
             # wait for request
             assert (yield from bus.dmac.read_dr()
-                    ).type == dmac_bus.Type.burst.value
+                    ).type == dmac_bus.Type.burst
             for i in range(10):
                 yield from write_ar(i, 0, len_=0)
                 # ack single tx
-                yield from bus.dmac.write_da(dmac_bus.Type.single.value)
+                yield from bus.dmac.write_da(dmac_bus.Type.single)
 
             # flush request
-            yield from bus.dmac.write_da(dmac_bus.Type.flush.value)
+            yield from bus.dmac.write_da(dmac_bus.Type.flush)
             # wait for flush ack
             assert (yield from bus.dmac.read_dr()
-                    ).type == dmac_bus.Type.flush.value
+                    ).type == dmac_bus.Type.flush
 
         def r_channel():
             yield bus.axi.r.ready.eq(1)
@@ -379,21 +379,21 @@ def test_reader():
         def ar_and_r_channel():
             # 1st burst
             assert attrgetter_ar((yield from i.read_ar())) == (
-                0x11223344, 3, Burst.incr.value)
+                0x11223344, 3, Burst.incr)
             yield from i.write_r(0x55, 0x11111111, okay, 0)
             yield from i.write_r(0x55, 0x22222222, okay, 0)
             yield from i.write_r(0x55, 0x33333333, okay, 0)
             yield from i.write_r(0x55, 0x44444444, okay, 1)
             # 2nd burst
             assert attrgetter_ar((yield from i.read_ar())) == (
-                0x11223350, 3, Burst.incr.value)
+                0x11223350, 3, Burst.incr)
             yield from i.write_r(0x55, 0x11111100, okay, 0)
             yield from i.write_r(0x55, 0x22222200, okay, 0)
             yield from i.write_r(0x55, 0x33333300, okay, 0)
             yield from i.write_r(0x55, 0x44444400, okay, 1)
             # 3rd burst, subsequent
             assert attrgetter_ar((yield from i.read_ar())) == (
-                0x11223360, 3, Burst.incr.value)
+                0x11223360, 3, Burst.incr)
             yield from i.write_r(0x55, 0x11111101, okay, 0)
             yield from i.write_r(0x55, 0x22222202, okay, 0)
             yield from i.write_r(0x55, 0x33333303, okay, 0)
@@ -448,13 +448,13 @@ def test_writer():
 
         def aw_channel():
             assert attrgetter_aw((yield from i.read_aw())) == (
-                0x11223344, 3, Burst.incr.value)
+                0x11223344, 3, Burst.incr)
             # 2nd burst
             assert attrgetter_aw((yield from i.read_aw())) == (
-                0x11223354, 3, Burst.incr.value)
+                0x11223354, 3, Burst.incr)
             # 3rd burst
             assert attrgetter_aw((yield from i.read_aw())) == (
-                0x11223344, 3, Burst.incr.value)
+                0x11223344, 3, Burst.incr)
 
         def w_channel():
             yield i.w.ready.eq(1)
@@ -526,8 +526,7 @@ def test_transaction_arbiter():
 
         def request_m_0():
             yield from m_0.write_ar(
-                0x01, mem_map["s_0"], 0, m_0.data_width // 8,
-                Burst.fixed.value)
+                0x01, mem_map["s_0"], 0, m_0.data_width // 8, Burst.fixed)
 
         def response_s_0():
             ar = s_0.ar
@@ -537,7 +536,7 @@ def test_transaction_arbiter():
             yield ar.ready.eq(1)
             yield
             assert attrgetter_ar((yield from s_0.read_ar())) == (
-                mem_map["s_0"], 0, Burst.fixed.value)
+                mem_map["s_0"], 0, Burst.fixed)
             yield ar.ready.eq(0)
 
         def transaction_s_0():
@@ -549,8 +548,7 @@ def test_transaction_arbiter():
         def request_m_1():
             yield
             yield from m_1.write_aw(
-                0x02, mem_map["s_1"], 0, m_0.data_width // 8,
-                Burst.fixed.value)
+                0x02, mem_map["s_1"], 0, m_0.data_width // 8, Burst.fixed)
 
         def response_s_1():
             aw = s_1.aw
@@ -558,7 +556,7 @@ def test_transaction_arbiter():
             yield aw.ready.eq(1)
             yield
             assert attrgetter_aw((yield from s_1.read_aw())) == (
-                mem_map["s_1"], 0, Burst.fixed.value)
+                mem_map["s_1"], 0, Burst.fixed)
             yield aw.ready.eq(0)
 
         def transaction_s_1():
@@ -583,26 +581,26 @@ def test_incr():
 
     def _test_fixed():
         yield from bus.write_aw(
-            0, 0xff100, 16 - 1, burst_size(4), Burst.fixed.value)
+            0, 0xff100, 16 - 1, burst_size(4), Burst.fixed)
         assert (yield dut.addr) == 0xff100
 
     def _test_incr():
         yield from bus.write_aw(
-            0, 0xff101, 16 - 1, burst_size(4), Burst.incr.value)
+            0, 0xff101, 16 - 1, burst_size(4), Burst.incr)
         assert (yield dut.addr) == 0xff104
 
     def _test_wrap():
         yield from bus.write_aw(
-            0, 0xff100, 16 - 1, burst_size(4), Burst.wrap.value)
+            0, 0xff100, 16 - 1, burst_size(4), Burst.wrap)
         assert (yield dut.addr) == 0xff104
         wrap_boundary = int(0xff100 / (16 * 4)) * 16 * 4
         yield from bus.write_aw(
             0, wrap_boundary + 14 * 4, 16 - 1,
-            burst_size(4), Burst.wrap.value)
+            burst_size(4), Burst.wrap)
         assert (yield dut.addr) == wrap_boundary + 15 * 4
         yield from bus.write_aw(
             0, wrap_boundary + 15 * 4, 16 - 1,
-            burst_size(4), Burst.wrap.value)
+            burst_size(4), Burst.wrap)
         assert (yield dut.addr) == wrap_boundary
 
     def testbench_incr():
