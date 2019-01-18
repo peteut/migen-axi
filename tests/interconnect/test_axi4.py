@@ -57,7 +57,6 @@ def test_axi4_w():
     assert "data" in get_names(dut)
     assert "strb" in get_names(dut)
     assert "user" not in get_names(dut)
-
     assert R.compose(get_width, get_item_by_name("data"))(dut) == 32
     assert R.compose(get_width, get_item_by_name("last"))(dut) == 1
 
@@ -65,9 +64,15 @@ def test_axi4_w():
 def test_axi4_b():
     cfg = axi4.Axi4Config(16, 32)
     dut = axi4.axi4_b(cfg, 0)
-
     assert len(dut) == 2
     assert "id" in get_names(dut)
     assert "resp" in get_names(dut)
-
     assert R.compose(get_width, get_item_by_name("resp"))(dut) == 2
+
+
+def test_axi4_unburstified():
+    cfg = axi4.Axi4Config(16, 32)
+    dut = axi4.axi4_ax_unburstified(cfg, 0)
+    assert len(dut) == 9
+    assert "id" in get_names(dut)
+    assert "user" not in get_names(dut)

@@ -70,44 +70,59 @@ if_else_none = R.if_else(R.__, R.__, R.always(None))
 filter_nil = R.reject(R.is_nil)
 two_ary = R.curry(R.n_ary(2, R.unapply(R.identity)))
 namedtuple2map = R.invoker(0, "_asdict")
+prep_input = R.compose(
+    R.juxt([R.compose(namedtuple2map, R.head), R.nth(1)]), two_ary)
+cond_add_id =  if_else_none(
+    R.path([0, "use_id"]),
+    R.compose(m2s, R.prepend("id"), R.of, R.path([0, "id_width"])))
+add_addr = R.compose(m2s, R.prepend("addr"), R.of, R.path([0, "addr_width"]))
+cond_add_region = if_else_none(
+    R.path([0, "use_region"]),
+    R.compose(m2s, R.prepend("region"), R.always([4])))
+cond_add_len = if_else_none(
+    R.path([0, "use_len"]), R.compose(m2s, R.prepend("len"), R.always([8])))
+cond_add_size = if_else_none(
+    R.path([0, "use_size"]), R.compose(m2s, R.prepend("size"), R.always([3])))
+cond_add_burst = if_else_none(
+    R.path([0, "use_burst"]),
+    R.compose(m2s, R.prepend("burst"), R.always([2])))
+cond_add_lock = if_else_none(
+    R.path([0, "use_lock"]), R.compose(m2s, R.prepend("lock"), R.always([1])))
+cond_add_cache  = if_else_none(
+    R.path([0, "use_cache"]),
+    R.compose(m2s, R.prepend("cache"), R.always([4])))
+cond_add_qos = if_else_none(
+    R.path([0, "use_qos"]), R.compose(m2s, R.prepend("qos"), R.always([4])))
+cond_add_user = lambda direction: if_else_none(
+    R.compose(R.flip(R.gt)(0), R.nth(1)),
+    R.compose(direction, R.prepend("user"), R.of, R.nth(1)))
+cond_add_prot = if_else_none(
+    R.path([0, "use_prot"]), R.compose(m2s, R.prepend("prot"), R.always([3])))
+add_data = lambda direction: R.compose(
+    direction, R.prepend("data"), R.of, R.path([0, "data_width"]))
+cond_add_strb = if_else_none(
+    R.path([0, "use_strb"]),
+    R.compose(m2s, R.prepend("strb"), R.of, R.path([0, "byte_per_word"])))
+cond_add_w_user = if_else_none(
+    R.path([0, "use_w_user"]), R.compose(m2s, R.prepend("user"), R.of,
+                                         R.path([0, "w_user_width"])))
+cond_add_last = lambda direction: if_else_none(
+    R.path([0, "use_last"]),
+    R.compose(direction, R.prepend("last"), R.always([1])))
+cond_add_r_user = if_else_none(
+    R.path([0, "use_r_user"]),
+    R.compose(s2m, R.prepend("user"), R.of, R.path([0, "r_user_width"])))
+cond_add_b_user = if_else_none(
+    R.path([0, "use_b_user"]),
+    R.compose(s2m, R.prepend("user"), R.of, R.path([0, "b_user_width"])))
+cond_add_resp = if_else_none(
+    R.path([0, "use_resp"]), R.compose(s2m, R.prepend("resp"), R.always([2])))
 
 axi4_ax = R.compose(
-    filter_nil,
-    R.juxt([
-        R.compose(m2s, R.prepend("addr"), R.of, R.path([0, "addr_width"])),
-        if_else_none(
-            R.path([0, "use_id"]),
-            R.compose(m2s, R.prepend("id"), R.of, R.path([0, "id_width"]))),
-        if_else_none(
-            R.path([0, "use_region"]),
-            R.compose(m2s, R.prepend("region"), R.always([4]))),
-        if_else_none(
-            R.path([0, "use_len"]),
-            R.compose(m2s, R.prepend("len"), R.always([8]))),
-        if_else_none(
-            R.path([0, "use_size"]),
-            R.compose(m2s, R.prepend("size"), R.always([3]))),
-        if_else_none(
-            R.path([0, "use_burst"]),
-            R.compose(m2s, R.prepend("burst"), R.always([2]))),
-        if_else_none(
-            R.path([0, "use_lock"]),
-            R.compose(m2s, R.prepend("lock"), R.always([1]))),
-        if_else_none(
-            R.path([0, "use_cache"]),
-            R.compose(m2s, R.prepend("cache"), R.always([4]))),
-        if_else_none(
-            R.path([0, "use_qos"]),
-            R.compose(m2s, R.prepend("qos"), R.always([4]))),
-        if_else_none(
-            R.compose(R.flip(R.gt)(0), R.nth(1)),
-            R.compose(m2s, R.prepend("user"), R.of, R.nth(1))),
-        if_else_none(
-            R.path([0, "use_prot"]),
-            R.compose(m2s, R.prepend("prot"), R.always([3]))),
-    ]),
-    R.juxt([R.compose(namedtuple2map, R.head), R.nth(1)]),
-    two_ary)
+    filter_nil, R.juxt([
+        cond_add_id, add_addr, cond_add_region, cond_add_len,
+        cond_add_size, cond_add_burst, cond_add_lock, cond_add_cache,
+        cond_add_qos, cond_add_user(m2s), cond_add_prot,]), prep_input)
 
 
 @R.curry
@@ -137,38 +152,13 @@ axi4_ar = axi4_ax
 axi4_arw = R.compose(R.append(["write", 1, DIR_M_TO_S]), axi4_ax)
 
 axi4_w = R.compose(
-    filter_nil,
-    R.juxt([
-        R.compose(m2s, R.prepend("data"), R.of, R.path([0, "data_width"])),
-        if_else_none(
-            R.path([0, "use_strb"]),
-            R.compose(m2s, R.prepend("strb"), R.of,
-                      R.path([0, "byte_per_word"]))),
-        if_else_none(
-            R.path([0, "use_w_user"]),
-            R.compose(m2s, R.prepend("user"), R.of,
-                      R.path([0, "w_user_width"]))),
-        if_else_none(
-            R.path([0, "use_last"]),
-            R.compose(m2s, R.prepend("last"), R.always([1])))]),
-    R.juxt([R.compose(namedtuple2map, R.head), R.nth(1)]),
-    two_ary)
+    filter_nil, R.juxt([
+        add_data(m2s), cond_add_strb, cond_add_w_user, cond_add_last(m2s)]),
+    prep_input)
 
 axi4_b = R.compose(
-    filter_nil,
-    R.juxt([
-        if_else_none(
-            R.path([0, "use_id"]),
-            R.compose(s2m, R.prepend("id"), R.of, R.path([0, "id_width"]))),
-        if_else_none(
-            R.path([0, "use_resp"]),
-            R.compose(s2m, R.prepend("resp"), R.always([2]))),
-        if_else_none(
-            R.path([0, "use_b_user"]),
-            R.compose(
-                s2m, R.prepend("user"), R.of, R.path([0, "b_user_width"])))]),
-    R.juxt([R.compose(namedtuple2map, R.head), R.nth(1)]),
-    two_ary)
+    filter_nil, R.juxt([cond_add_id, cond_add_resp, cond_add_b_user]),
+    prep_input)
 
 _set_resp = _set("resp")
 set_okay = _set_resp(R.__, R.__, R.__, Response.okay)
@@ -190,22 +180,12 @@ is_decerr = R.compose(R.equals(Response.decerr), _get_resp)
 
 
 axi4_r = R.compose(
-    filter_nil,
-    R.juxt([
-        R.compose(s2m, R.prepend("data"), R.of, R.path([0, "data_width"])),
-        if_else_none(
-            R.path([0, "use_id"]),
-            R.compose(s2m, R.prepend("id"), R.of, R.path([0, "id_width"]))),
-        if_else_none(
-            R.path([0, "use_resp"]),
-            R.compose(s2m, R.prepend("resp"), R.always([2]))),
-        if_else_none(
-            R.path([0, "use_last"]),
-            R.compose(s2m, R.prepend("last"), R.always([1]))),
-        if_else_none(
-            R.path([0, "use_r_user"]),
-            R.compose(
-                s2m, R.prepend("user"), R.of, R.path([0, "r_user_width"]))),
-    ]),
-    R.juxt([R.compose(namedtuple2map, R.head), R.nth(1)]),
-    two_ary)
+    filter_nil, R.juxt([
+        add_data(s2m), cond_add_id, cond_add_resp, cond_add_last(s2m),
+        cond_add_r_user]), prep_input)
+
+axi4_ax_unburstified = R.compose(
+    filter_nil, R.juxt([
+        add_addr, cond_add_id, cond_add_region, cond_add_size,
+        cond_add_burst, cond_add_lock, cond_add_cache, cond_add_qos,
+        cond_add_user(m2s), cond_add_prot]), prep_input)
