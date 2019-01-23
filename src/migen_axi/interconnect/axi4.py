@@ -1,14 +1,24 @@
-from .axi import Burst, Alock, Response
-import typing
+from abc import ABCMeta, abstractmethod
+from typing import NamedTuple, Optional
+from functools import lru_cache
+# from multimethod import overload  #, multidispatch, isa
+
 import ramda as R
-from migen import *  # noqa
+from nmigen import *  # noqa
+from nmigen.hdl.rec import DIR_FANOUT, DIR_FANIN
+from nmigen.hdl import ast
+from .axi import Burst, Alock, Response
+from .misc import DelegateRecordMixin, FragmentMixin
+from .fraction import Fraction
+from .stream import Stream
+
 from misoc.interconnect import stream
 
 __all__ = ["Axi4Config", "axi4_aw", "axi4_ar", "axi4_arw",
            "axi4_w", "axi4_b", "axi4_r"]
 
 
-class Axi4Config(typing.NamedTuple):
+class Axi4Config(NamedTuple):
     """Configuration for the Axi4 bus
     """
     addr_width: int
@@ -65,7 +75,7 @@ class Axi4Config(typing.NamedTuple):
         return self.data_width // 8
 
 
-m2s, s2m = R.append(DIR_M_TO_S), R.append(DIR_S_TO_M)
+m2s, s2m = R.append(DIR_FANOUT), R.append(DIR_FANIN)
 if_else_none = R.if_else(R.__, R.__, R.always(None))
 filter_nil = R.reject(R.is_nil)
 two_ary = R.curry(R.n_ary(2, R.unapply(R.identity)))
@@ -149,7 +159,7 @@ set_cache = _set("cache")
 
 axi4_aw = axi4_ax
 axi4_ar = axi4_ax
-axi4_arw = R.compose(R.append(["write", 1, DIR_M_TO_S]), axi4_ax)
+axi4_arw = R.compose(R.append(["write", 1, DIR_FANOUT]), axi4_ax)
 
 axi4_w = R.compose(
     filter_nil, R.juxt([
@@ -189,3 +199,51 @@ axi4_ax_unburstified = R.compose(
         add_addr, cond_add_id, cond_add_region, cond_add_size,
         cond_add_burst, cond_add_lock, cond_add_cache, cond_add_qos,
         cond_add_user(m2s), cond_add_prot]), prep_input)
+
+
+
+is_fanout = R.compose(
+    R.apply(R.equals), R.pluck("value"), R.prepend(DIR_FANOUT), R.of, R.last)
+is_fanin = R.compose(
+    R.apply(R.equals), R.pluck("value"), R.prepend(DIR_FANIN), R.of, R.last)
+
+flip_layout = R.map(
+    R.cond([
+        (is_fanout,
+         R.compose(tuple, R.append(DIR_FANIN), list, R.drop_last(1))),
+        (is_fanin,
+         R.compose(tuple, R.append(DIR_FANOUT), list, R.drop_last(1))),
+        (R.always(True), R.identity)]))
+
+flip = R.cond([
+    (R.is_(Record), R.compose(Record, flip_layout, R.prop("layout"))),
+    (R.always(True), R.identity)])
+
+
+class Axi4(metaclass=ABCMeta):
+    __slots__ = ("aw", "w", "b", "ar", "r")
+
+    def __init__(self, config: Axi4Config):
+        self.aw = Stream(axi4_aw(config))
+        self.w = Stream(axi4_w(config))
+        self.b = Stream(axi4_b(config))
+        self.ar = Stream(axi4_ar(config))
+        self.r = Stream(axi4_r(config))
+
+    @property
+    def write_cmd(self) -> Stream: return self.aw
+
+    @property
+    def write_data(self) -> Stream: return self.w
+
+    @property
+    def write_rsp(self) -> Stream: return self.b
+
+    @property
+    def read_cmd(self) -> Stream: return self.ar
+
+    @property
+    def read_rsp(self) -> Stream: return self.r
+
+    def __rshift__(self, other):
+        raise NotImplemented

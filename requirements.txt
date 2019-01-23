@@ -5,4 +5,4 @@ git+https://github.com/peteut/ramda.py.git#egg=ramda
 -rhttps://raw.githubusercontent.com/peteut/migen/master/requirements.txt
 git+https://github.com/peteut/migen.git#egg=migen
 git+https://github.com/peteut/misoc.git#egg=misoc
-
+git+https://github.com/peteut/nmigen.git#egg=nmigen

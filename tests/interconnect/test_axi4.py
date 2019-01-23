@@ -1,5 +1,7 @@
 import ramda as R
 from migen_axi.interconnect import axi4
+from nmigen import *  # noqa
+from nmigen.hdl.rec import DIR_FANIN, DIR_FANOUT
 
 
 get_name = R.head
@@ -76,3 +78,17 @@ def test_axi4_unburstified():
     assert len(dut) == 9
     assert "id" in get_names(dut)
     assert "user" not in get_names(dut)
+
+
+# def test_axi4_clone_of():
+#     assert axi4.clone_of(Record([("foo", 42)])).foo.nbits == 42
+#     assert axi4.clone_of(Const(42)).value == 42
+#     assert axi4.clone_of(Signal(42)).nbits == 42
+
+
+def test_flip_layout():
+    assert axi4.flip_layout([
+        ("foo", 10, DIR_FANOUT),
+        ("bar", 20, DIR_FANIN)]) == [
+            ("foo", 10, DIR_FANIN),
+            ("bar", 20, DIR_FANOUT)]
