@@ -121,7 +121,7 @@ class SoCCore(Module):
                 self.csr_data_width, memory)
         for name, constant in self.csrbankarray.constants:
             self._constants.append(
-                (("_".join([name, constant.name]).uppper(),
+                (("_".join([name, constant.name]).upper(),
                   constant.value.value)))
 
         # Interrupts
