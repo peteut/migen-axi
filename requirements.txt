@@ -1,8 +1,7 @@
 click>=6.6
 numpy>=1.14
--rhttps://raw.githubusercontent.com/peteut/ramda.py/master/requirements.txt
-git+https://github.com/peteut/ramda.py.git#egg=ramda
--rhttps://raw.githubusercontent.com/peteut/migen/master/requirements.txt
-git+https://github.com/peteut/migen.git#egg=migen
-git+https://github.com/peteut/misoc.git#egg=misoc
+toolz>=0.10.0
+ramda>=0.5.5
 
+git+https://github.com/m-labs/migen#egg=migen
+git+https://github.com/peteut/misoc.git#egg=misoc

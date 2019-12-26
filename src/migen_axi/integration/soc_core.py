@@ -38,7 +38,7 @@ class SoCCore(Module):
         self._axi_slaves = SlaveManager(max_addr)
 
         self.csr_devices = [
-            "identifier_mem",
+            "identifier",
         ]
         self.interrupt_devices = []
 
