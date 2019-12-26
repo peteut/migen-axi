@@ -1,7 +1,5 @@
-click>=6.6
-numpy>=1.14
 toolz>=0.10.0
 ramda>=0.5.5
 
 git+https://github.com/m-labs/migen#egg=migen
-git+https://github.com/peteut/misoc.git#egg=misoc
+git+https://github.com/m-labs/misoc.git#egg=misoc
