@@ -26,6 +26,8 @@ class SoCCore(Module):
                  max_addr=0xc0000000,
                  ident="SoCCore"):
         self.platform = platform
+        self.integrated_rom_size = 0
+        self.cpu_type = "zynq7000"
         # self.clk_freq = clk_freq
 
         self.csr_data_width = csr_data_width
@@ -40,6 +42,8 @@ class SoCCore(Module):
         self.csr_devices = [
             "identifier",
         ]
+        self._memory_groups = []  # list of (group_name, (group_member0, group_member1, ...))
+        self._csr_groups = []  # list of (group_name, (group_member0, group_member1, ...))
         self.interrupt_devices = []
 
         self.submodules.ps7 = ps7.PS7(SimpleNamespace(
@@ -66,6 +70,9 @@ class SoCCore(Module):
     def add_memory_region(self, name, origin, length):
         self._memory_regions.append((name, origin, length))
 
+    def add_memory_group(self, group_name, members):
+        self._memory_groups.append((group_name, members))
+
     def check_csr_region(self, name, origin):
         for n, o, l, obj in self._csr_regions:
             if n == name or o == origin:
@@ -76,20 +83,26 @@ class SoCCore(Module):
         self.check_csr_region(name, origin)
         self._csr_regions.append((name, origin, busword, obj))
 
+    def add_csr_group(self, group_name, members):
+        self._csr_groups.append((group_name, members))
+
     def register_mem(self, name, origin, length, interface):
         self.add_axi_slave(origin, length, interface)
         self.add_memory_region(name, origin, length)
 
-    @property
-    def memory_regions(self):
+    def get_memory_regions(self):
         return self._memory_regions
 
-    @property
-    def csr_regions(self):
+    def get_memory_groups(self):
+        return self._memory_groups
+
+    def get_csr_regions(self):
         return self._csr_regions
 
-    @property
-    def constants(self):
+    def get_csr_groups(self):
+        return self._csr_groups
+
+    def get_constants(self):
         return self._constants
 
     def get_csr_dev_address(self, name, memory):
