@@ -65,6 +65,7 @@ def test_response(attr, value):
     "data_width", [
         8,
         16,
+        32,
     ])
 def test_axi2csr(data_width):
     dut = AXI2CSR(bus_csr=csr_bus.Interface(data_width=data_width))
@@ -87,6 +88,12 @@ def test_axi2csr(data_width):
 
     def testbench_axi2csr():
         i = dut.bus
+
+        def mask(value):
+            return value & {
+                8: 0xff,
+                16: 0xffff,
+                32: 0xffffffff}[data_width]
 
         def aw_channel():
             assert (yield i.aw.ready) == 1
@@ -116,12 +123,9 @@ def test_axi2csr(data_width):
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x01, 0x22)
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x02, 0x33)
             assert attrgetter_csr_w_mon((yield from w_mon())) == (0x03, 0x44)
-            if data_width == 8:
-                assert attrgetter_csr_w_mon(
-                    (yield from w_mon())) == (0x10, 0x44)
-            elif data_width == 16:
-                assert attrgetter_csr_w_mon(
-                    (yield from w_mon())) == (0x10, 0x3344)
+
+            assert attrgetter_csr_w_mon(
+                (yield from w_mon())) == (0x10, mask(0x11223344))
             # ok, read it now
             yield from write_ar(0x11, 0x00)
             yield from write_ar(0x22, 0x04)
@@ -134,12 +138,8 @@ def test_axi2csr(data_width):
             assert attrgetter_r((yield from read_r())) == (0x22, 0x22, okay, 1)
             assert attrgetter_r((yield from read_r())) == (0x33, 0x33, okay, 1)
             assert attrgetter_r((yield from read_r())) == (0x44, 0x44, okay, 1)
-            if data_width == 8:
-                assert attrgetter_r((yield from read_r())) == (
-                    0x55, 0x44, okay, 1)
-            elif data_width == 16:
-                assert attrgetter_r((yield from read_r())) == (
-                    0x55, 0x3344, okay, 1)
+            assert attrgetter_r((yield from read_r())) == (
+                0x55, mask(0x11223344), okay, 1)
 
         return [
             aw_channel(), w_channel(), b_channel(), r_channel(), ar_channel(),
