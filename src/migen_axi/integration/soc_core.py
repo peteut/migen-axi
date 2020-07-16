@@ -1,4 +1,6 @@
+from operator import itemgetter
 from types import SimpleNamespace
+
 from migen import *  # noqa
 from misoc.cores import identifier
 from misoc.integration.wb_slaves import WishboneSlaveManager as SlaveManager
@@ -38,6 +40,7 @@ class SoCCore(Module):
         self._constants = []  # seq of (name, value)
 
         self._axi_slaves = SlaveManager(max_addr)
+        self.config = dict()
 
         self.csr_devices = [
             "identifier",
@@ -136,6 +139,8 @@ class SoCCore(Module):
             self._constants.append(
                 (("_".join([name, constant.name]).upper(),
                   constant.value.value)))
+        for name, value in sorted(self.config.items(), key=itemgetter(0)):
+            self._constants.append(("CONFIG_" + name.upper(), value))
 
         # Interrupts
         for n, name in enumerate(self.interrupt_devices):
