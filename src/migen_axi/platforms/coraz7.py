@@ -1,12 +1,13 @@
 from migen import *  # noqa
-from migen.build.platforms import coraz7_07s
+from migen.build.platforms import coraz7
 from migen.build.generic_platform import Pins, Subsignal, IOStandard
 
 
 __all__ = ["Platform"]
 
 
-class Platform(coraz7_07s.Platform):
+# Digilent Cora Z7-07S, and Z7-10
+class Platform(coraz7.Platform):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         super().__getattribute__("add_extension")([
