@@ -1,7 +1,7 @@
 ## Migen AXI
 
-[![Build Status](https://travis-ci.org/peteut/migen-axi.svg)](
-https://travis-ci.org/peteut/migen-axi)
+[![Build Status](https://app.travis-ci.com/peteut/migen-axi.svg?branch=master)](
+https://app.travis-ci.com/peteut/migen-axi)
 [![Coverage Status](https://coveralls.io/repos/peteut/migen-axi/badge.svg)](
 https://coveralls.io/r/peteut/migen-axi)
 
