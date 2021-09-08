@@ -91,3 +91,42 @@ class AXI2CSR(Module):
             self.csr.we.eq(0),
             self.csr.dat_w.eq(w.data),
         ]
+
+
+class AddressDecoder(Module):
+    # slaves is a list of pairs:
+    # 0) function that takes the address signal and returns a FHDL expression
+    #    that evaluates to 1 when the slave is selected and 0 otherwise.
+    # 1) Memory.port or csr bus reference.
+    # register adds flip-flops after the address comparators. Improves timing,
+    # but breaks Wishbone combinatorial feedback.
+    def __init__(self, master, slaves, register=True):
+        ns = len(slaves)
+        slave_sel = Signal(ns)
+        self.slave_sel_r = Signal(ns)
+
+        ###
+
+        # decode slave addresses
+        self.comb += [slave_sel[i].eq(fn(master.addr))
+                      for i, (fn, _) in enumerate(slaves)]
+        if register:
+            self.sync += self.slave_sel_r.eq(slave_sel)
+        else:
+            self.comb += self.slave_sel_r.eq(slave_sel)
+
+        # connect master->slaves signals except we
+        for _, slave in slaves:
+            for dest, source in [(getattr(slave, name),
+                                  getattr(master, name)) for
+                                 name, _, direction in master.layout
+                                 if direction == DIR_M_TO_S and name != "we"]:
+                self.comb += dest.eq(source)
+
+        # combine we with slave selection signals
+        self.comb += [slave[1].we.eq(master.we & slave_sel) 
+            for _, slave in enumerate(slaves)]
+
+        # mux (1-hot) slave data return
+        masked = [Replicate(self.slave_sel_r[i], len(master.dat_r)) & slaves[i][1].dat_r for i in range(ns)]
+        self.comb += master.dat_r.eq(reduce(or_, masked))
