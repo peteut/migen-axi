@@ -7,10 +7,20 @@ __all__ = ["AXI2CSR"]
 
 
 class AXI2CSR(Module):
-    def __init__(self, bus_axi=None, bus_csr=None):
+    def __init__(self, bus_axi=None, bus_csr=None, addr_extension=4):
         self.bus = bus_axi or axi.Interface()
         self.csr = bus_csr or csr_bus.Interface()
 
+
+        # internal bus that will connect to address decoder
+        # needs to be wider than CSR bus to accommodate both bus and any SRAM
+        self.internal_csr = csr_bus.Interface(
+            data_width=len(self.csr.dat_w), address_width=len(self.csr.adr)+addr_extension)
+
+        # slave list to add to address decoder at the end 
+        # csr bus is the first slave
+        self.slaves = [(lambda a: a[len(self.csr.adr):] == 0, self.csr)]
+        
         ###
 
         dw = len(self.csr.dat_w)
@@ -33,12 +43,12 @@ class AXI2CSR(Module):
             If(
                 aw.valid,
                 ar.ready.eq(0),
-                NextValue(self.csr.adr, aw.addr[2:]),
+                NextValue(self.internal_csr.adr, aw.addr[2:]),
                 NextValue(id_, aw.id),
                 NextState("WRITE"),
             ).Elif(
                 ar.valid,
-                NextValue(self.csr.adr, ar.addr[2:]),
+                NextValue(self.internal_csr.adr, ar.addr[2:]),
                 NextValue(id_, ar.id),
                 NextValue(pending, 1),
                 NextState("READ"),
@@ -49,7 +59,7 @@ class AXI2CSR(Module):
             If(
                 w.valid,
                 w.ready.eq(1),
-                NextValue(self.csr.we, 1),
+                NextValue(self.internal_csr.we, 1),
                 NextState("WRITE_DONE"),
             ),
         )
@@ -87,10 +97,20 @@ class AXI2CSR(Module):
         ]
         self.sync += [
             pending.eq(0),
-            r.data.eq(self.csr.dat_r),
-            self.csr.we.eq(0),
-            self.csr.dat_w.eq(w.data),
+            r.data.eq(self.internal_csr.dat_r),
+            self.internal_csr.we.eq(0),
+            self.internal_csr.dat_w.eq(w.data),
         ]
+
+    def add_slave(self, fun, slave):
+        # fun - function that takes the address signal and returns a FHDL expression
+        #       that evaluates to 1 when the slave is selected and 0 otherwise.
+        # slave - Memory.port or csr bus reference.
+        self.slaves += [(fun, slave)]
+
+    def do_finalize(self):
+        decoder = AddressDecoder(self.internal_csr, self.slaves, register=True)
+        self.submodules += [decoder]
 
 
 class AddressDecoder(Module):
@@ -108,7 +128,7 @@ class AddressDecoder(Module):
         ###
 
         # decode slave addresses
-        self.comb += [slave_sel[i].eq(fn(master.addr))
+        self.comb += [slave_sel[i].eq(fn(master.adr))
                       for i, (fn, _) in enumerate(slaves)]
         if register:
             self.sync += self.slave_sel_r.eq(slave_sel)
