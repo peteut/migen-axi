@@ -157,7 +157,8 @@ def test_axi2csr(data_width):
     ])
 def test_axi2csr_mem(data_width):
     dut = AXI2CSR(bus_csr=csr_bus.Interface(data_width=data_width))
-    addr = dut.add_memory(0x100, read_only=False)
+    addr = dut.add_memory(0x40, read_only=False)
+    _ = dut.add_memory(0x40, read_only=False)
     csr_addr = addr >> 2
 
     write_aw = partial(

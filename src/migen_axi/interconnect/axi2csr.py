@@ -118,11 +118,13 @@ class AXI2CSR(Module):
 
         if isinstance(memory_or_size, Memory):
             memory = memory_or_size
+            size = memory.depth * memory.width // 8
         else:
             memory = Memory(data_bus_width,
                             memory_or_size // (data_bus_width // 8),
                             init=init
                             )
+            size = memory_or_size
         assert memory.width <= data_bus_width
         # only powers of 2 supported due to the auto generated fun
         assert 2 ** log2_int(memory.depth) == memory.depth
@@ -131,7 +133,7 @@ class AXI2CSR(Module):
         # check if the remaining part of the address bus
         # corresponds to the possible address
         cut_addr = self._relative_addr >> 2
-        addr_bits = log2_int(memory.depth * memory.width // 32)
+        addr_bits = log2_int(size >> 2)
 
         port = memory.get_port(write_capable=not read_only,
                                we_granularity=0)  # csr bus limitation
@@ -141,7 +143,7 @@ class AXI2CSR(Module):
         self.add_slave(lambda a: a[addr_bits:] == cut_addr >> addr_bits, port)
 
         addr_start = self._relative_addr
-        self._relative_addr += memory.depth
+        self._relative_addr += size
 
         return addr_start
 
