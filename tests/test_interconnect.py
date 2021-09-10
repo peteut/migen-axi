@@ -157,8 +157,8 @@ def test_axi2csr(data_width):
     ])
 def test_axi2csr_mem(data_width):
     dut = AXI2CSR(bus_csr=csr_bus.Interface(data_width=data_width))
-    addr = dut.add_memory(0x40, read_only=False)
-    _ = dut.add_memory(0x40, read_only=False)
+    addr, size = dut.add_memory(0x40, read_only=False)
+    addr2, size2 = dut.add_memory(0x40, read_only=False)
     csr_addr = addr >> 2
 
     write_aw = partial(
@@ -177,6 +177,10 @@ def test_axi2csr_mem(data_width):
     def testbench_axi2csr_mem():
         i = dut.bus
 
+        assert addr == 0x10000
+        assert addr2 == 0x10040
+        assert size == 0x40
+        assert size2 == 0x40
         # mask is not necessary here as it should
         # work as intended regardless of csr bus width
 

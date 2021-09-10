@@ -145,7 +145,7 @@ class AXI2CSR(Module):
         addr_start = self._relative_addr
         self._relative_addr += size
 
-        return addr_start
+        return addr_start, size
 
     def do_finalize(self):
         decoder = AddressDecoder(self._internal_csr,

@@ -68,6 +68,12 @@ class SoCCore(Module):
             raise RuntimeError("{} already finalised")
         self._axi_slaves.add(origin, length, interface)
 
+    # This function adds SRAM/Memory through the AXI2CSR bridge
+    # and adds it to the firmware generated headers
+    def add_sram(self, name, memory_or_size, read_only=False, init=None):
+        addr, size = self.axi2csr.add_memory(memory_or_size, read_only, init)
+        self.add_memory_region(name, addr, size)
+
     # This function simply registers the memory region for firmware purposes
     # (linker script, generated headers)
     def add_memory_region(self, name, origin, length):
