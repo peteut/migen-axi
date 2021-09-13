@@ -55,13 +55,16 @@ class SoCCore(Module):
             ddr=platform.request("ddr"),
         ))
 
+        # csr_addr_extension is by how many address lanes over csr
+        # should be widened to accommodate for any additional
+        # memories in axi2csr
         self.submodules.axi2csr = axi2csr.AXI2CSR(
             bus_csr=csr_bus.Interface(csr_data_width, csr_address_width),
             bus_axi=axi.Interface.like(self.ps7.m_axi_gp1),
             addr_extension=csr_addr_extension)
 
-        self.register_mem("csr", self.mem_map["csr"], 
-                          4 * 2**csr_address_width,
+        self.register_mem("csr", self.mem_map["csr"],
+                          4 * 2**(csr_address_width + csr_addr_extension),
                           self.axi2csr.bus)
 
         self.submodules.identifier = identifier.Identifier(ident)
