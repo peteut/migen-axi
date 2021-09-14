@@ -111,8 +111,6 @@ class AXI2CSR(Module):
         # fun - function that takes the adr signal and returns a FHDL expr.
         #       that evaluates to 1 when the slave is selected and 0 otherwise.
         # slave - Memory.port or csr bus reference.
-        if isinstance(slave, fhdl.specials.Special):
-            self.specials += slave
         self.slaves += [(fun, slave)]
 
     def register_port(self, port, size):
@@ -125,6 +123,7 @@ class AXI2CSR(Module):
         cut_addr = self._relative_addr >> 2
         addr_bits = log2_int(size >> 2)
 
+        self.specials += port
         self.add_slave(lambda a: a[addr_bits:] == cut_addr >> addr_bits,
                        port)
 
