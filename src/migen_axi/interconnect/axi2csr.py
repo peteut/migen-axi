@@ -7,18 +7,11 @@ __all__ = ["AXI2CSR"]
 
 
 class AXI2CSR(Module):
-    def __init__(self, bus_axi=None, bus_csr=None, addr_extension=None):
+    def __init__(self, bus_axi=None, bus_csr=None):
         self.bus = bus_axi or axi.Interface()
         self.csr = bus_csr or csr_bus.Interface()
 
-        # if None, will be calculated automatically
-        # if a number, it will be added to csr bus width
-        self._addr_bus_ext = addr_extension
-
-        if isinstance(addr_extension, int):
-            self._max_addr = 2 ** len(self.csr.adr + addr_extension) - 1
-        else:
-            self._max_addr = 2 ** len(self.bus.aw.addr) - 1
+        self._max_addr = 2 ** len(self.bus.aw.addr) - 1
 
         # slave list to add to address decoder at the end
         # csr bus is the first slave
@@ -33,13 +26,10 @@ class AXI2CSR(Module):
             raise NotImplementedError(
                 "AXI2CSR data_width shall be in (8, 16, 32)")
 
-    def add_slave(self, fun, slave):
+    def _add_slave(self, fun, slave):
         # fun - function that takes the adr signal and returns a FHDL expr.
         #       that evaluates to 1 when the slave is selected and 0 otherwise.
         # slave - Memory.port or csr bus reference.
-        #
-        # if this function is used on its own,
-        # update relative_addr or calculate bus extension manually
         self.slaves += [(fun, slave)]
 
     def register_port(self, port, size):
@@ -55,8 +45,8 @@ class AXI2CSR(Module):
         cut_addr = self._relative_addr >> 2
         addr_bits = log2_int(size >> 2)
 
-        self.add_slave(lambda a: a[addr_bits:] == cut_addr >> addr_bits,
-                       port)
+        self._add_slave(lambda a: a[addr_bits:] == cut_addr >> addr_bits,
+                        port)
 
         addr_start = self._relative_addr
         self._relative_addr += size
@@ -89,14 +79,11 @@ class AXI2CSR(Module):
         return addr_start, size
 
     def do_finalize(self):
-        if not isinstance(self._addr_bus_ext, int):
-            internal_adr_bus_width = log2_int(
-                self._relative_addr, need_pow2=False)
-        else:
-            internal_adr_bus_width = len(self.csr.adr) + self._addr_bus_ext
         # internal bus that will connect to address decoder
         # needs to be wider than CSR bus to accommodate both bus and any SRAM
         # data width also identical to AXI to accomodate SRAM
+        internal_adr_bus_width = log2_int(self._relative_addr, need_pow2=False)
+
         internal_csr = csr_bus.Interface(
             data_width=len(self.bus.r.data),
             address_width=internal_adr_bus_width)
