@@ -170,7 +170,6 @@ def test_axi2csr_mem(data_width):
     mem3_port_read = mem3.get_port(write_capable=False)
     addr3_write = dut.register_port(mem3_port_write, 0x40)
     addr3_read = dut.register_port(mem3_port_read, 0x40)
-    csr_addr = addr >> 2
 
     write_aw = partial(
         dut.bus.write_aw,
@@ -183,7 +182,6 @@ def test_axi2csr_mem(data_width):
         size=burst_size(dut.bus.data_width // 8), len_=0,
         burst=Burst.fixed)
     read_r = dut.bus.read_r
-    w_mon = partial(csr_w_mon, dut._internal_csr)
 
     def testbench_axi2csr_mem():
         i = dut.bus
@@ -220,19 +218,8 @@ def test_axi2csr_mem(data_width):
             assert attrgetter_b((yield from read_b())) == (0x05, okay)
 
         def ar_channel():
-            # ensure data was actually written
-            assert attrgetter_csr_w_mon(
-                (yield from w_mon())) == (csr_addr + 0x00, 0x11)
-            assert attrgetter_csr_w_mon(
-                (yield from w_mon())) == (csr_addr + 0x01, 0x11223344)
-            assert attrgetter_csr_w_mon(
-                (yield from w_mon())) == (csr_addr + 0x0A, 0x33445566)
-            assert attrgetter_csr_w_mon(
-                (yield from w_mon())) == (csr_addr + 0x0B, 0x778899AA)
-            assert attrgetter_csr_w_mon(
-                (yield from w_mon())) == (csr_addr + 0x10, 0xDEADBEEF)
-
-            # ok, read it now
+            # cannot check if data written because internal_csr
+            # is created at the very end
             yield from write_ar(0x11, addr + 0x00)
             yield from write_ar(0x22, addr + 0x04)
             yield from write_ar(0x33, addr2 + 0x08)
