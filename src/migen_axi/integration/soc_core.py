@@ -58,7 +58,8 @@ class SoCCore(Module):
             bus_csr=csr_bus.Interface(csr_data_width, csr_address_width),
             bus_axi=axi.Interface.like(self.ps7.m_axi_gp1))
 
-        self.register_mem("csr", self.mem_map["csr"], 4 * 2**csr_address_width,
+        self.register_mem("csr", self.mem_map["csr"],
+                          4 * 2**(csr_address_width),
                           self.axi2csr.bus)
 
         self.submodules.identifier = identifier.Identifier(ident)
@@ -67,6 +68,13 @@ class SoCCore(Module):
         if self.finalized:
             raise RuntimeError("{} already finalised")
         self._axi_slaves.add(origin, length, interface)
+
+    # This function adds SRAM/Memory through the AXI2CSR bridge
+    # and adds it to the firmware generated headers
+    def add_sram(self, name, memory_or_size, read_only=False, init=None):
+        addr, size = self.axi2csr.add_memory(memory_or_size, read_only, init)
+        # addr is relative, starting at the bottom of csr map
+        self.add_memory_region(name, self.mem_map["csr"] + addr, size)
 
     # This function simply registers the memory region for firmware purposes
     # (linker script, generated headers)

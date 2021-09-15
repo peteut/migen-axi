@@ -149,6 +149,105 @@ def test_axi2csr(data_width):
                    vcd_name=file_tmp_folder("test_axi2csr.vcd"))
 
 
+@pytest.mark.parametrize(
+    "data_width", [
+        8,
+        16,
+        32,
+    ])
+def test_axi2csr_mem(data_width):
+    dut = AXI2CSR(bus_csr=csr_bus.Interface(data_width=data_width))
+    # create memory through axi2csr
+    addr, size = dut.add_memory(0x20, read_only=False)
+    # create memory manually and add it later
+    mem2 = Memory(32, 8)
+    addr2, size2 = dut.add_memory(mem2, read_only=False)
+    # create memory and add ports manually
+    mem3 = Memory(32, 16)
+    # necessary otherwise will throw "Could not lower all specials"
+    dut.specials += mem3
+    mem3_port_write = mem3.get_port(write_capable=True)
+    mem3_port_read = mem3.get_port(write_capable=False)
+    addr3_write = dut.register_port(mem3_port_write, 0x40)
+    addr3_read = dut.register_port(mem3_port_read, 0x40)
+
+    write_aw = partial(
+        dut.bus.write_aw,
+        size=burst_size(dut.bus.data_width // 8), len_=0,
+        burst=Burst.fixed)
+    write_w = dut.bus.write_w
+    read_b = dut.bus.read_b
+    write_ar = partial(
+        dut.bus.write_ar,
+        size=burst_size(dut.bus.data_width // 8), len_=0,
+        burst=Burst.fixed)
+    read_r = dut.bus.read_r
+
+    def testbench_axi2csr_mem():
+        i = dut.bus
+
+        assert addr == 0x10000
+        assert addr2 == 0x10020
+        assert addr3_write == 0x10040
+        assert addr3_read == 0x10080
+        assert size == 0x20
+        assert size2 == 0x20
+        # mask is not necessary here as it should
+        # work as intended regardless of csr bus width
+
+        def aw_channel():
+            assert (yield i.aw.ready) == 1
+            yield from write_aw(0x01, addr + 0x00)
+            yield from write_aw(0x02, addr + 0x04)
+            yield from write_aw(0x03, addr2 + 0x08)
+            yield from write_aw(0x04, addr2 + 0x0c)
+            yield from write_aw(0x05, addr3_write + 0x00)
+
+        def w_channel():
+            yield from write_w(0, 0x11, strb=1)
+            yield from write_w(0, 0x11223344, strb=1)
+            yield from write_w(0, 0x33445566, strb=1)
+            yield from write_w(0, 0x778899AA, strb=1)
+            yield from write_w(0, 0xDEADBEEF)
+
+        def b_channel():
+            assert attrgetter_b((yield from read_b())) == (0x01, okay)
+            assert attrgetter_b((yield from read_b())) == (0x02, okay)
+            assert attrgetter_b((yield from read_b())) == (0x03, okay)
+            assert attrgetter_b((yield from read_b())) == (0x04, okay)
+            assert attrgetter_b((yield from read_b())) == (0x05, okay)
+
+        def ar_channel():
+            # cannot check if data written because internal_csr
+            # is created at the very end
+            yield from write_ar(0x11, addr + 0x00)
+            yield from write_ar(0x22, addr + 0x04)
+            yield from write_ar(0x33, addr2 + 0x08)
+            yield from write_ar(0x44, addr2 + 0x0c)
+            yield from write_ar(0x55, addr3_read + 0x00)
+
+        def r_channel():
+            # mem 1
+            assert attrgetter_r((yield from read_r())) == (0x11, 0x11, okay, 1)
+            assert attrgetter_r((yield from read_r())) == (
+                0x22, 0x11223344, okay, 1)
+            # mem 2
+            assert attrgetter_r((yield from read_r())) == (
+                0x33, 0x33445566, okay, 1)
+            assert attrgetter_r((yield from read_r())) == (
+                0x44, 0x778899AA, okay, 1)
+            # mem 3
+            assert attrgetter_r((yield from read_r())) == (
+                0x55, 0xDEADBEEF, okay, 1)
+
+        return [
+            aw_channel(), w_channel(), b_channel(), r_channel(), ar_channel(),
+        ]
+
+    run_simulation(dut, testbench_axi2csr_mem(),
+                   vcd_name=file_tmp_folder("test_axi2csr_mem.vcd"))
+
+
 def test_sram():
     # most of the code was copied from CSR, as it also tests SRAM
     # just with a different interface
