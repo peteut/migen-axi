@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools ~= 58.0", "setuptools_scm[toml] ~= 6.2"]
+
+[project]
+name = "migen-axi"
+description = "Some migen modules for limited PS7 support"
+readme = "README.md"
+author = "Alain Péteut <alain.peteut@yahoo.com>"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = ["version"]
+
+dependencies = [
+    "toolz>=0.10.0",
+    "ramda>=0.5.5",
+    "migen@git+https://github.com/m-labs/migen",
+    "misoc@git+https://github.com/m-labs/misoc.git",
+]
+
+[project.urls]
+homepage = "https://github.com/peteut/migen-axi"
+repository = "https://github.com/peteut/migen-axi.git"
+
+[tools.setuptools_scm]
+write_to= "src/migen_axi/_version.py"

@@ -2,9 +2,9 @@ os: linux
 dist: xenial
 language: python
 python:
-    - 3.7
+    - 3.9
 env:
-    - TOXENV=py37
+    - TOXENV=py39
 install:
     - pip install -U pip
     - pip install tox

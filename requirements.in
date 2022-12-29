@@ -1,5 +1,0 @@
-toolz>=0.10.0
-ramda>=0.5.5
-
-git+https://github.com/m-labs/migen#egg=migen
-git+https://github.com/m-labs/misoc.git#egg=misoc
