@@ -14,6 +14,15 @@ dependencies = [
     "misoc@git+https://github.com/m-labs/misoc.git",
 ]
 
+[project.optional-dependencies]
+test = [
+    "flake8<=3.8.0",
+    "pytest",
+    "pytest-flake8",
+    "pytest-timeout",
+    "coverage",
+]
+
 [metadata]
 author = "Alain Péteut <alain.peteut@yahoo.com>"
 classifiers = [
