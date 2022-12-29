@@ -99,3 +99,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# auto generated
+src/migen_axi/_version.py
