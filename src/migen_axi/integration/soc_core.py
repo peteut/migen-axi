@@ -26,7 +26,8 @@ class SoCCore(Module):
                  csr_data_width=8,
                  csr_address_width=14,
                  max_addr=0xc0000000,
-                 ident="SoCCore"):
+                 ident="SoCCore",
+                 ps_cd_sys=True):
         self.platform = platform
         self.integrated_rom_size = 0
         self.cpu_type = "zynq7000"
@@ -52,7 +53,7 @@ class SoCCore(Module):
         self.submodules.ps7 = ps7.PS7(SimpleNamespace(
             ps=platform.request("ps"),
             ddr=platform.request("ddr"),
-        ))
+        ), ps_cd_sys=ps_cd_sys)
 
         self.submodules.axi2csr = axi2csr.AXI2CSR(
             bus_csr=csr_bus.Interface(csr_data_width, csr_address_width),
