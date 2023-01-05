@@ -351,7 +351,7 @@ class ENET(Module):
 
 class PS7(Module):
     def __init__(self, pads=SimpleNamespace(
-            ps=None, ddr=None, enet0=None, enet1=None), **kwargs):
+            ps=None, ddr=None, enet0=None, enet1=None), ps_cd_sys=True, **kwargs):
         pads.ps = pads.ps or ps_rec()
         pads.ddr = pads.ddr or ddr_rec()
 
@@ -396,7 +396,8 @@ class PS7(Module):
         self.ddr_arb = Signal(4)
         self.mio = Signal(54)
 
-        self.clock_domains.cd_sys = ClockDomain()
+        if ps_cd_sys:
+            self.clock_domains.cd_sys = ClockDomain()
 
         self.dma0 = dmac_bus.Interface(name="dma0")
         self.dma1 = dmac_bus.Interface(name="dma1")
@@ -490,11 +491,12 @@ class PS7(Module):
         ]
 
         self.fclk = fclk_rec()
-        # fclk.reset_n considered async
-        self.specials += [
-            AsyncResetSynchronizer(self.cd_sys, ~self.fclk.reset_n[0]),
-            bufg([self.fclk.clk[0], ClockSignal()]),
-        ]
+        if ps_cd_sys:
+            # fclk.reset_n considered async
+            self.specials += [
+                AsyncResetSynchronizer(self.cd_sys, ~self.fclk.reset_n[0]),
+                bufg([self.fclk.clk[0], ClockSignal()]),
+            ]
 
         self.comb += self.fclk.clktrig_n.eq(0)
         ftmd = ftmd_rec()
