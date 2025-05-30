@@ -40,6 +40,11 @@ class AXI2CSR(Module):
 
         self.specials += port
 
+        # to assign a unique address decoding expression for memories with different size
+        # starting address must be aligned to the size of the memory
+        padding = (size - (self._relative_addr % size)) % size
+        self._relative_addr += padding
+
         # check if the remaining part of the address bus
         # corresponds to the possible address
         cut_addr = self._relative_addr >> 2
