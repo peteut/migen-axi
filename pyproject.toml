@@ -10,8 +10,8 @@ dynamic = ["version"]
 dependencies = [
     "toolz>=0.10.0",
     "ramda>=0.5.5",
-    "migen@git+https://github.com/m-labs/migen",
-    "misoc@git+https://github.com/m-labs/misoc.git",
+    "migen@git+https://git.m-labs.hk/m-labs/migen.git",
+    "misoc@git+https://git.m-labs.hk/m-labs/misoc.git",
 ]
 
 [project.optional-dependencies]
