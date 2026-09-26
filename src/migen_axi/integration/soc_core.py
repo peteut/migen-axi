@@ -183,7 +183,7 @@ class SoCCore(SoCCoreBase):
 class SoCCoreZynqMP(SoCCoreBase):
     """SoCCore for Zynq UltraScale+ MPSoC (PS8) platforms."""
     mem_map = dict(
-        axi=0xA400_0000,  # m_axi_gp0/M_AXI_HPM0_FPD
+        axi=0xA000_0000,  # m_axi_gp0/M_AXI_HPM0_FPD
         csr=0xB000_0000,  # m_axi_gp1/M_AXI_HPM1_FPD
     )
     cpu_type = "zynqmp"

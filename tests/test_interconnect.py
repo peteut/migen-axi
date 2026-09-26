@@ -248,6 +248,19 @@ def test_axi2csr_mem(data_width):
                    vcd_name=file_tmp_folder("test_axi2csr_mem.vcd"))
 
 
+def test_add_memory_word_width_128bit_axi():
+    # PS8 uses a 128-bit AXI bus; add_memory must still create 32-bit-wide
+    # words so that byte-addressed offsets map to the right memory location.
+    dut = AXI2CSR(
+        bus_axi=axi.Interface(data_width=128),
+        bus_csr=csr_bus.Interface(data_width=8))
+    _, _ = dut.add_memory(0x20, read_only=False)
+    memories = [s for s in dut._fragment.specials if isinstance(s, Memory)]
+    assert len(memories) == 1
+    assert memories[0].width == 32
+    assert memories[0].depth == 0x20 // 4  # 8 words
+
+
 def test_sram():
     # most of the code was copied from CSR, as it also tests SRAM
     # just with a different interface

@@ -102,3 +102,6 @@ ENV/
 
 # auto generated
 src/migen_axi/_version.py
+
+# pytest generated files
+wrshim.vcd
