@@ -16,7 +16,6 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "flake8~=7.0",
     "pytest",
     "pytest-timeout",
     "coverage",
