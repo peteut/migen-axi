@@ -65,8 +65,9 @@ class AXI2CSR(Module):
             memory = memory_or_size
             size = memory.depth * memory.width // 8
         else:
-            memory = Memory(data_bus_width,
-                            memory_or_size // (data_bus_width // 8),
+            # ensure 32-bit width; PS8 uses 128-bit width AXI4 while PS7 uses 32-bit
+            memory = Memory(32,
+                            memory_or_size // 4,
                             init=init
                             )
             size = memory_or_size

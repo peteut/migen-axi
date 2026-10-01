@@ -1,1 +1,1 @@
-from .soc_core import SoCCore
+from .soc_core import SoCCore, SoCCoreZynqMP
